@@ -1,194 +1,233 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>text-shape</title>
-    <meta
-      name="description"
-      content="Text layout and measurement: shaping, wrapping, bidi text, alignment and bounds. Rust, and WebAssembly for JavaScript."
-    />
-    <script type="module" src="/src/main.ts"></script>
-  </head>
-  <body>
-    <main>
-      <h1>text-shape</h1>
-      <p class="lead">
-        Lays out text from a font file: shapes it, wraps it into lines, orders mixed
-        left-to-right and right-to-left text, aligns it, and measures it. You get
-        positioned glyphs and their outlines, and draw them however you like. Written in
-        Rust, and also built for WebAssembly as an npm package.
-      </p>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>text-shape</title>
+		<meta
+			name="description"
+			content="Text layout and measurement: shaping, wrapping, bidi text, alignment and bounds. Rust, and WebAssembly for JavaScript."
+		/>
+		<script type="module" src="/src/main.ts"></script>
+	</head>
+	<body>
+		<main>
+			<h1>text-shape</h1>
+			<p class="lead">
+				Lays out text from a font file: shapes it, wraps it into lines, orders mixed
+				left-to-right and right-to-left text, aligns it, and measures it. You get
+				positioned glyphs and their outlines, and draw them however you like. Written in
+				Rust, and also built for WebAssembly as an npm package.
+			</p>
 
-      <div class="demo">
-        <form class="controls" id="demo-form">
-          <div class="text-input">
-            <label
-              ><span>text</span>
-              <textarea name="text" rows="2" spellcheck="false"></textarea
-            ></label>
-            <div class="text-source">
-              <label
-                ><span>sample</span>
-                <select name="sample">
-                  <option value="latin">English</option>
-                  <option value="arabic">Arabic (right to left)</option>
-                </select></label
-              >
-              <label
-                ><span>font</span>
-                <select name="font">
-                  <option value="flex">Roboto Flex (variable)</option>
-                  <option value="roboto">Roboto (static)</option>
-                  <option value="arabic">Noto Sans Arabic (variable)</option>
-                </select></label
-              >
-            </div>
-          </div>
+			<div class="demo">
+				<form class="controls" id="demo-form">
+					<div class="text-input">
+						<label
+							><span>text</span>
+							<textarea name="text" rows="2" spellcheck="false"></textarea>
+						</label>
+						<div class="text-source">
+							<label
+								><span>sample</span>
+								<select name="sample">
+									<option value="latin">English</option>
+									<option value="arabic">Arabic (right to left)</option>
+								</select></label
+							>
+							<label
+								><span>font</span>
+								<select name="font">
+									<option value="flex">Roboto Flex (variable)</option>
+									<option value="roboto">Roboto (static)</option>
+									<option value="arabic">Noto Sans Arabic (variable)</option>
+								</select></label
+							>
+						</div>
+					</div>
 
-          <div class="groups">
+					<div class="groups">
+						<fieldset>
+							<legend>Size</legend>
+							<label
+								><span>size</span>
+								<input type="range" name="size" min="12" max="120" value="40" />
+								<output for="size"></output
+							></label>
+							<label
+								><span>box width</span>
+								<input
+									type="range"
+									name="width"
+									min="80"
+									max="600"
+									value="520" />
+								<output for="width"></output
+							></label>
+							<label
+								><span>line height</span>
+								<input
+									type="range"
+									name="leading"
+									min="0.8"
+									max="2"
+									step="0.05"
+									value="1.2" />
+								<output for="leading"></output
+							></label>
+						</fieldset>
 
-            <fieldset>
-              <legend>Size</legend>
-              <label
-                ><span>size</span>
-                <input type="range" name="size" min="12" max="120" value="40" />
-                <output for="size"></output
-              ></label>
-              <label
-                ><span>box width</span>
-                <input type="range" name="width" min="80" max="600" value="520" />
-                <output for="width"></output
-              ></label>
-              <label
-                ><span>line height</span>
-                <input type="range" name="leading" min="0.8" max="2" step="0.05" value="1.2" />
-                <output for="leading"></output
-              ></label>
-            </fieldset>
+						<fieldset>
+							<legend>Layout</legend>
+							<label
+								><span>horizontal</span>
+								<select name="alignH">
+									<option selected>start</option>
+									<option>end</option>
+									<option>left</option>
+									<option>center</option>
+									<option>right</option>
+								</select></label
+							>
+							<label
+								><span>vertical</span>
+								<select name="alignV">
+									<option selected>top</option>
+									<option>center</option>
+									<option>bottom</option>
+									<option>baseline</option>
+								</select></label
+							>
+							<label
+								><span>wrap</span>
+								<select name="wrap">
+									<option selected>word</option>
+									<option>char</option>
+								</select></label
+							>
+							<label
+								><span>direction</span>
+								<select name="direction">
+									<option value="inherit" selected>auto</option>
+									<option>ltr</option>
+									<option>rtl</option>
+								</select></label
+							>
+						</fieldset>
 
-            <fieldset>
-              <legend>Layout</legend>
-              <label
-                ><span>horizontal</span>
-                <select name="alignH">
-                  <option selected>start</option>
-                  <option>end</option>
-                  <option>left</option>
-                  <option>center</option>
-                  <option>right</option>
-                </select></label
-              >
-              <label
-                ><span>vertical</span>
-                <select name="alignV">
-                  <option selected>top</option>
-                  <option>center</option>
-                  <option>bottom</option>
-                  <option>baseline</option>
-                </select></label
-              >
-              <label
-                ><span>wrap</span>
-                <select name="wrap">
-                  <option selected>word</option>
-                  <option>char</option>
-                </select></label
-              >
-              <label
-                ><span>direction</span>
-                <select name="direction">
-                  <option value="inherit" selected>auto</option>
-                  <option>ltr</option>
-                  <option>rtl</option>
-                </select></label
-              >
-            </fieldset>
+						<fieldset>
+							<legend>Style</legend>
+							<label
+								><span>weight</span>
+								<input
+									type="range"
+									name="weight"
+									min="100"
+									max="1000"
+									step="10"
+									value="400" />
+								<output for="weight"></output
+							></label>
+							<label
+								><span>style</span>
+								<select name="style">
+									<option selected>normal</option>
+									<option>italic</option>
+									<option>bold</option>
+									<option>bolditalic</option>
+								</select></label
+							>
+							<label
+								><span>spacing</span>
+								<input
+									type="range"
+									name="spacing"
+									min="-4"
+									max="20"
+									value="0" />
+								<output for="spacing"></output
+							></label>
+							<label
+								><span>kerning</span>
+								<input
+									type="text"
+									name="kerning"
+									placeholder="0:-4, 3:2"
+									spellcheck="false"
+									title="position:px pairs, e.g. 0:-4 adds -4px between the 1st and 2nd character"
+							/></label>
+						</fieldset>
+					</div>
 
-            <fieldset>
-              <legend>Style</legend>
-              <label
-                ><span>weight</span>
-                <input type="range" name="weight" min="100" max="1000" step="10" value="400" />
-                <output for="weight"></output
-              ></label>
-              <label
-                ><span>style</span>
-                <select name="style">
-                  <option selected>normal</option>
-                  <option>italic</option>
-                  <option>bold</option>
-                  <option>bolditalic</option>
-                </select></label
-              >
-              <label
-                ><span>spacing</span>
-                <input type="range" name="spacing" min="-4" max="20" value="0" />
-                <output for="spacing"></output
-              ></label>
-              <label
-                ><span>kerning</span>
-                <input
-                  type="text"
-                  name="kerning"
-                  placeholder="0:-4, 3:2"
-                  spellcheck="false"
-                  title="position:px pairs, e.g. 0:-4 adds -4px between the 1st and 2nd character"
-              /></label>
-            </fieldset>
-          </div>
+					<div class="toggles">
+						<span>show</span>
+						<label
+							><input type="checkbox" name="showLines" checked /> line
+							boxes</label
+						>
+						<label
+							><input type="checkbox" name="showInk" checked /> ink bounds</label
+						>
+						<label><input type="checkbox" name="showGlyphs" /> glyph origins</label>
+					</div>
+				</form>
+				<canvas id="demo"></canvas>
+				<p class="caption">
+					Dashed: the layout box (<code>maxWidth</code> ×
+					<code>maxHeight</code>).<br />
+					Shaded with a line: each line's advance box and baseline (together they make
+					up
+					<code>fontBounds</code>). Red: the tight ink bounds
+					(<code>textBounds</code>).<br />
+					Spacing is letter spacing in px. Kerning takes
+					<code>position:px</code> pairs: <code>0:-4</code> puts 4px less space
+					between the 1st and 2nd character, on top of the font's own kerning.<br />
+					<span id="demo-stats"></span>
+				</p>
+				<pre><code class="language-ts" id="demo-code"></code></pre>
+			</div>
 
-          <div class="toggles">
-            <span>show</span>
-            <label><input type="checkbox" name="showLines" checked /> line boxes</label>
-            <label><input type="checkbox" name="showInk" checked /> ink bounds</label>
-            <label><input type="checkbox" name="showGlyphs" /> glyph origins</label>
-          </div>
-        </form>
-        <canvas id="demo"></canvas>
-        <p class="caption">
-          Dashed: the layout box (<code>maxWidth</code> × <code>maxHeight</code>).<br />
-          Shaded with a line: each line's advance box and baseline (together they make up
-          <code>fontBounds</code>). Red: the tight ink bounds (<code>textBounds</code>).<br />
-          Spacing is letter spacing in px. Kerning takes <code>position:px</code> pairs:
-          <code>0:-4</code> puts 4px less space between the 1st and 2nd character, on top of
-          the font's own kerning.<br />
-          <span id="demo-stats"></span>
-        </p>
-        <pre><code class="language-ts" id="demo-code"></code></pre>
-      </div>
+			<h2>Features</h2>
+			<ul>
+				<li>
+					Shaping with OpenType features: kerning, ligatures, small caps, stylistic
+					sets.
+				</li>
+				<li>
+					Wrapping by word, where the Unicode line breaking rules allow it (<a
+						href="https://www.unicode.org/reports/tr14/"
+						>UAX #14</a
+					>), or by character, without splitting emoji or accented letters (<a
+						href="https://www.unicode.org/reports/tr29/"
+						>UAX #29</a
+					>).
+				</li>
+				<li>
+					Mixed left-to-right and right-to-left text, ordered by the Unicode
+					bidirectional algorithm (<a href="https://www.unicode.org/reports/tr9/"
+						>UAX #9</a
+					>), with joining scripts like Arabic shaped correctly.
+				</li>
+				<li>
+					Horizontal and vertical alignment, line height, letter and word spacing.
+				</li>
+				<li>
+					Manual kerning of specific character pairs, and OpenType features on part of
+					the text, e.g. kerning off for one word.
+				</li>
+				<li>Loose (advance) and tight (ink) widths and bounds.</li>
+				<li>
+					Variable fonts: weight and slant through the font's own axes, with faux bold
+					and italic for fonts that have neither.
+				</li>
+				<li>
+					Glyph outlines as path commands, or as cached <code>Path2D</code>s in JS.
+				</li>
+			</ul>
 
-      <h2>Features</h2>
-      <ul>
-        <li>
-          Shaping with OpenType features: kerning, ligatures, small caps, stylistic sets.
-        </li>
-        <li>
-          Wrapping by word, where the Unicode line breaking rules allow it
-          (<a href="https://www.unicode.org/reports/tr14/">UAX #14</a>), or by character, without splitting emoji or
-          accented letters (<a href="https://www.unicode.org/reports/tr29/">UAX #29</a>).
-        </li>
-        <li>
-          Mixed left-to-right and right-to-left text, ordered by the Unicode bidirectional
-          algorithm (<a href="https://www.unicode.org/reports/tr9/">UAX #9</a>), with joining scripts like Arabic shaped
-          correctly.
-        </li>
-        <li>Horizontal and vertical alignment, line height, letter and word spacing.</li>
-        <li>
-          Manual kerning of specific character pairs, and OpenType features on part of the
-          text, e.g. kerning off for one word.
-        </li>
-        <li>Loose (advance) and tight (ink) widths and bounds.</li>
-        <li>
-          Variable fonts: weight and slant through the font's own axes, with faux bold and
-          italic for fonts that have neither.
-        </li>
-        <li>Glyph outlines as path commands, or as cached <code>Path2D</code>s in JS.</li>
-      </ul>
-
-      <h2>JavaScript</h2>
-      <pre><code class="language-sh">npm install text-shape</code></pre>
-      <pre><code class="language-ts">import { loadFont, Typography, CENTER, TOP } from "text-shape";
+			<h2>JavaScript</h2>
+			<pre><code class="language-sh">npm install text-shape</code></pre>
+			<pre><code class="language-ts">import { loadFont, Typography, CENTER, TOP } from "text-shape";
 
 const font = await loadFont("/fonts/Roboto-Regular.ttf");
 const t = new Typography().textFont(font, 48).textAlign(CENTER, TOP);
@@ -211,17 +250,17 @@ for (const line of layout.lines) {
 t.textWidth("Hi"); // tight (ink) width, px
 t.fontWidth("Hi"); // loose (advance) width, px
 t.textBounds("Hi", 0, 0); // { x, y, w, h }</code></pre>
-      <p>
-        On npm as <a href="https://www.npmjs.com/package/text-shape">text-shape</a>, with
-        TypeScript types. It works in browsers and Node 20+ with no bundler setup:
-        the WebAssembly is embedded in the package. Text positions (glyph clusters, line
-        ranges) are UTF-16 offsets, so they work with <code>String.slice</code>.
-      </p>
+			<p>
+				On npm as <a href="https://www.npmjs.com/package/text-shape">text-shape</a>,
+				with TypeScript types. It works in browsers and Node 20+ with no bundler setup:
+				the WebAssembly is embedded in the package. Text positions (glyph clusters, line
+				ranges) are UTF-16 offsets, so they work with <code>String.slice</code>.
+			</p>
 
-      <h2>Rust</h2>
-      <pre><code class="language-toml">[dependencies]
+			<h2>Rust</h2>
+			<pre><code class="language-toml">[dependencies]
 text-shape = "0.1"</code></pre>
-      <pre><code class="language-rust">use text_shape::{Font, HorizAlign, LayoutOptions};
+			<pre><code class="language-rust">use text_shape::{Font, HorizAlign, LayoutOptions};
 
 let font = Font::from_bytes(std::fs::read("Roboto-Regular.ttf")?, 0)?;
 let text = "Hello world, wrapped in a box";
@@ -238,112 +277,121 @@ for line in &amp;layout.lines {
         let outline = font.outline(g.id); // font units, y up
     }
 }</code></pre>
-      <p>
-        On crates.io as <a href="https://crates.io/crates/text-shape">text-shape</a>, the
-        same engine as the npm package. Rust 1.85+. Text positions are UTF-8 byte offsets.
-      </p>
+			<p>
+				On crates.io as <a href="https://crates.io/crates/text-shape">text-shape</a>,
+				the same engine as the npm package. Rust 1.85+. Text positions are UTF-8 byte
+				offsets.
+			</p>
 
-      <h2>JavaScript API</h2>
-      <p>
-        <code>Typography</code> setters are chainable; call them with no arguments to read
-        the current value. Units are px with y down.
-      </p>
-      <table>
-        <tr>
-          <th>Function</th>
-          <th></th>
-        </tr>
-        <tr>
-          <td><code>loadFont(url)</code>, <code>Font.fromBytes(bytes)</code></td>
-          <td>Load a TTF, OTF or TTC font.</td>
-        </tr>
-        <tr>
-          <td><code>layout(str, x, y, maxWidth?, maxHeight?, extras?)</code></td>
-          <td>
-            Lines and positioned glyphs. Wraps when <code>maxWidth</code> is given; aligns
-            within the box. <code>extras.kerning</code>, e.g.
-            <code>[{ at: 0, px: -4 }]</code>, adjusts specific character pairs.
-          </td>
-        </tr>
-        <tr>
-          <td><code>textFont</code>, <code>textSize</code>, <code>textLeading</code></td>
-          <td>Font, size and line height (default 1.25 × size).</td>
-        </tr>
-        <tr>
-          <td><code>textAlign(h, v?)</code></td>
-          <td>
-            <code>START</code> (default) <code>END</code> <code>LEFT</code>
-            <code>CENTER</code> <code>RIGHT</code> × <code>TOP</code> <code>CENTER</code>
-            <code>BOTTOM</code> <code>BASELINE</code> (default). <code>START</code> and
-            <code>END</code> follow the text direction, like CSS <code>text-align</code>.
-          </td>
-        </tr>
-        <tr>
-          <td><code>textWrap(mode)</code></td>
-          <td><code>WORD</code> or <code>CHAR</code></td>
-        </tr>
-        <tr>
-          <td><code>textDirection(dir)</code></td>
-          <td><code>"ltr"</code>, <code>"rtl"</code> or <code>"inherit"</code> (detect)</td>
-        </tr>
-        <tr>
-          <td><code>textWeight(n)</code>, <code>textStyle(style)</code></td>
-          <td>
-            Weight, and <code>NORMAL</code> <code>ITALIC</code> <code>BOLD</code>
-            <code>BOLDITALIC</code>. Uses the font's axes when it has them (bold means a
-            weight of at least 700); otherwise
-            <code>layout().synthetic</code> says how to fake bold and italic.
-          </td>
-        </tr>
-        <tr>
-          <td><code>textProperty(name, value?)</code></td>
-          <td>
-            <code>fontKerning</code>, <code>fontVariantCaps</code>,
-            <code>letterSpacing</code>, <code>wordSpacing</code>, <code>direction</code>,
-            <code>fontFeatures</code>, <code>fontVariationSettings</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>fontWidth</code>, <code>fontBounds</code></td>
-          <td>Loose (advance-based) width and box.</td>
-        </tr>
-        <tr>
-          <td><code>textWidth</code>, <code>textBounds</code></td>
-          <td>Tight (ink) width and box.</td>
-        </tr>
-        <tr>
-          <td>
-            <code>fontAscent</code>, <code>fontDescent</code>, <code>textAscent</code>,
-            <code>textDescent</code>
-          </td>
-          <td>From the font's metrics, or tight for a given string.</td>
-        </tr>
-        <tr>
-          <td colspan="2">
-            The measurements that take a string accept the same optional
-            <code>extras</code> as <code>layout()</code>, as their last argument, e.g.
-            <code>t.textWidth("AVATAR", { kerning })</code>.
-          </td>
-        </tr>
-        <tr>
-          <td><code>font.path(id)</code>, <code>font.outline(id)</code></td>
-          <td>A glyph as a cached <code>Path2D</code>, or as path commands.</td>
-        </tr>
-      </table>
+			<h2>JavaScript API</h2>
+			<p>
+				<code>Typography</code> setters are chainable; call them with no arguments to
+				read the current value. Units are px with y down.
+			</p>
+			<table>
+				<tr>
+					<th>Function</th>
+					<th></th>
+				</tr>
+				<tr>
+					<td><code>loadFont(url)</code>, <code>Font.fromBytes(bytes)</code></td>
+					<td>Load a TTF, OTF or TTC font.</td>
+				</tr>
+				<tr>
+					<td><code>layout(str, x, y, maxWidth?, maxHeight?, extras?)</code></td>
+					<td>
+						Lines and positioned glyphs. Wraps when <code>maxWidth</code> is given;
+						aligns within the box. <code>extras.kerning</code>, e.g.
+						<code>[{ at: 0, px: -4 }]</code>, adjusts specific character pairs.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<code>textFont</code>, <code>textSize</code>, <code>textLeading</code>
+					</td>
+					<td>Font, size and line height (default 1.25 × size).</td>
+				</tr>
+				<tr>
+					<td><code>textAlign(h, v?)</code></td>
+					<td>
+						<code>START</code> (default) <code>END</code> <code>LEFT</code>
+						<code>CENTER</code> <code>RIGHT</code> × <code>TOP</code>
+						<code>CENTER</code> <code>BOTTOM</code> <code>BASELINE</code> (default).
+						<code>START</code> and <code>END</code> follow the text direction, like
+						CSS <code>text-align</code>.
+					</td>
+				</tr>
+				<tr>
+					<td><code>textWrap(mode)</code></td>
+					<td><code>WORD</code> or <code>CHAR</code></td>
+				</tr>
+				<tr>
+					<td><code>textDirection(dir)</code></td>
+					<td>
+						<code>"ltr"</code>, <code>"rtl"</code> or
+						<code>"inherit"</code> (detect)
+					</td>
+				</tr>
+				<tr>
+					<td><code>textWeight(n)</code>, <code>textStyle(style)</code></td>
+					<td>
+						Weight, and <code>NORMAL</code> <code>ITALIC</code> <code>BOLD</code>
+						<code>BOLDITALIC</code>. Uses the font's axes when it has them (bold
+						means a weight of at least 700); otherwise
+						<code>layout().synthetic</code> says how to fake bold and italic.
+					</td>
+				</tr>
+				<tr>
+					<td><code>textProperty(name, value?)</code></td>
+					<td>
+						<code>fontKerning</code>, <code>fontVariantCaps</code>,
+						<code>letterSpacing</code>, <code>wordSpacing</code>,
+						<code>direction</code>, <code>fontFeatures</code>,
+						<code>fontVariationSettings</code>
+					</td>
+				</tr>
+				<tr>
+					<td><code>fontWidth</code>, <code>fontBounds</code></td>
+					<td>Loose (advance-based) width and box.</td>
+				</tr>
+				<tr>
+					<td><code>textWidth</code>, <code>textBounds</code></td>
+					<td>Tight (ink) width and box.</td>
+				</tr>
+				<tr>
+					<td>
+						<code>fontAscent</code>, <code>fontDescent</code>,
+						<code>textAscent</code>,
+						<code>textDescent</code>
+					</td>
+					<td>From the font's metrics, or tight for a given string.</td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						The measurements that take a string accept the same optional
+						<code>extras</code> as <code>layout()</code>, as their last argument,
+						e.g. <code>t.textWidth("AVATAR", { kerning })</code>.
+					</td>
+				</tr>
+				<tr>
+					<td><code>font.path(id)</code>, <code>font.outline(id)</code></td>
+					<td>A glyph as a cached <code>Path2D</code>, or as path commands.</td>
+				</tr>
+			</table>
 
-      <footer>
-        <a href="https://github.com/yyyk/text-shape">GitHub</a> ·
-        <a href="https://crates.io/crates/text-shape">crates.io</a> ·
-        <a href="https://www.npmjs.com/package/text-shape">npm</a> · MIT License · © 2026
-        yyyk<br />
-        Fonts:
-        <a href="https://github.com/googlefonts/roboto-flex">Roboto Flex</a>
-        (<a id="license-roboto-flex">OFL</a>),
-        <a href="https://github.com/googlefonts/roboto-classic">Roboto</a>
-        (<a id="license-roboto">OFL</a>),
-        <a href="https://github.com/notofonts/arabic">Noto Sans Arabic</a>
-        (<a id="license-noto-arabic">OFL</a>)
-      </footer>
-    </main>
-  </body>
+			<footer>
+				<a href="https://github.com/yyyk/text-shape">GitHub</a> ·
+				<a href="https://crates.io/crates/text-shape">crates.io</a> ·
+				<a href="https://www.npmjs.com/package/text-shape">npm</a> · MIT License · ©
+				2026 yyyk<br />
+				Fonts:
+				<a href="https://github.com/googlefonts/roboto-flex">Roboto Flex</a>
+				(<a id="license-roboto-flex">OFL</a>),
+				<a href="https://github.com/googlefonts/roboto-classic">Roboto</a>
+				(<a id="license-roboto">OFL</a>),
+				<a href="https://github.com/notofonts/arabic">Noto Sans Arabic</a>
+				(<a id="license-noto-arabic">OFL</a>)
+			</footer>
+		</main>
+	</body>
 </html>

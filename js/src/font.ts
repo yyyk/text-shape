@@ -1,16 +1,16 @@
-import initWasm, * as wasm from "../wasm/text_shape.js";
+import initWasm, * as wasm from '../wasm/text_shape.js';
 import type {
-  FontMetrics,
-  FontStyle,
-  InitInput,
-  LayoutOptions,
-  LayoutResult,
-  PathCmd,
-  ResolvedStyle,
-  ShapeOptions,
-  ShapingResult,
-  VariationAxis,
-} from "../wasm/text_shape.js";
+	FontMetrics,
+	FontStyle,
+	InitInput,
+	LayoutOptions,
+	LayoutResult,
+	PathCmd,
+	ResolvedStyle,
+	ShapeOptions,
+	ShapingResult,
+	VariationAxis,
+} from '../wasm/text_shape.js';
 
 export type Variations = Record<string, number>;
 
@@ -26,15 +26,15 @@ let wasmReady: Promise<unknown> | null = null;
  * Vite: `import wasmUrl from "text-shape/text_shape_bg.wasm?url"; initText(wasmUrl);`
  */
 export function initText(wasm?: InitInput | Promise<InitInput>): Promise<unknown> {
-  return (wasmReady ??= initWasm({ module_or_path: wasm ?? embeddedWasm() }));
+	return (wasmReady ??= initWasm({ module_or_path: wasm ?? embeddedWasm() }));
 }
 
 async function embeddedWasm(): Promise<Uint8Array> {
-  const { default: base64 } = await import("../wasm/text_shape_wasm_base64.js");
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+	const { default: base64 } = await import('../wasm/text_shape_wasm_base64.js');
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+	return bytes;
 }
 
 /**
@@ -45,148 +45,156 @@ async function embeddedWasm(): Promise<Uint8Array> {
  * it wants and the font re-applies them only when they change.
  */
 export class Font {
-  readonly id: number;
-  readonly axes: VariationAxis[];
+	readonly id: number;
+	readonly axes: VariationAxis[];
 
-  private appliedKey = "";
-  private metricsCache = new Map<string, FontMetrics>();
-  private styleCache = new Map<string, ResolvedStyle>();
-  private outlineCache = new Map<string, PathCmd[]>();
-  private pathCache = new Map<string, Path2D>();
+	private appliedKey = '';
+	private metricsCache = new Map<string, FontMetrics>();
+	private styleCache = new Map<string, ResolvedStyle>();
+	private outlineCache = new Map<string, PathCmd[]>();
+	private pathCache = new Map<string, Path2D>();
 
-  private constructor(id: number) {
-    this.id = id;
-    this.axes = wasm.get_variation_axes(id);
-  }
+	private constructor(id: number) {
+		this.id = id;
+		this.axes = wasm.get_variation_axes(id);
+	}
 
-  static async load(url: string, faceIndex?: number): Promise<Font> {
-    const [buf] = await Promise.all([
-      fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`failed to load font ${url}: ${r.status}`);
-        return r.arrayBuffer();
-      }),
-      initText(),
-    ]);
-    return new Font(wasm.load_font(new Uint8Array(buf), faceIndex));
-  }
+	static async load(url: string, faceIndex?: number): Promise<Font> {
+		const [buf] = await Promise.all([
+			fetch(url).then(r => {
+				if (!r.ok) throw new Error(`failed to load font ${url}: ${r.status}`);
+				return r.arrayBuffer();
+			}),
+			initText(),
+		]);
+		return new Font(wasm.load_font(new Uint8Array(buf), faceIndex));
+	}
 
-  /** Requires `initText()` to have resolved. */
-  static fromBytes(bytes: Uint8Array, faceIndex?: number): Font {
-    return new Font(wasm.load_font(bytes, faceIndex));
-  }
+	/** Requires `initText()` to have resolved. */
+	static fromBytes(bytes: Uint8Array, faceIndex?: number): Font {
+		return new Font(wasm.load_font(bytes, faceIndex));
+	}
 
-  axis(tag: string): VariationAxis | undefined {
-    return this.axes.find((a) => a.tag === tag);
-  }
+	axis(tag: string): VariationAxis | undefined {
+		return this.axes.find(a => a.tag === tag);
+	}
 
-  metrics(variations: Variations = {}): FontMetrics {
-    const key = this.apply(variations);
-    let m = this.metricsCache.get(key);
-    if (!m) {
-      m = wasm.get_metrics(this.id);
-      this.metricsCache.set(key, m);
-    }
-    return m;
-  }
+	metrics(variations: Variations = {}): FontMetrics {
+		const key = this.apply(variations);
+		let m = this.metricsCache.get(key);
+		if (!m) {
+			m = wasm.get_metrics(this.id);
+			this.metricsCache.set(key, m);
+		}
+		return m;
+	}
 
-  shape(text: string, options: ShapeOptions = {}, variations: Variations = {}): ShapingResult {
-    this.apply(variations);
-    return wasm.shape(this.id, text, options);
-  }
+	shape(
+		text: string,
+		options: ShapeOptions = {},
+		variations: Variations = {},
+	): ShapingResult {
+		this.apply(variations);
+		return wasm.shape(this.id, text, options);
+	}
 
-  /** Lines and positioned glyphs. Low-level; `Typography.layout()` builds the options for you. */
-  layout(text: string, options: LayoutOptions = {}, variations: Variations = {}): LayoutResult {
-    this.apply(variations);
-    return wasm.layout(this.id, text, options);
-  }
+	/** Lines and positioned glyphs. Low-level; `Typography.layout()` builds the options for you. */
+	layout(
+		text: string,
+		options: LayoutOptions = {},
+		variations: Variations = {},
+	): LayoutResult {
+		this.apply(variations);
+		return wasm.layout(this.id, text, options);
+	}
 
-  /** Maps a weight/style onto this font's axes, or faux bold/italic parameters. */
-  resolveStyle(style: FontStyle = {}): ResolvedStyle {
-    const key = `${style.weight ?? ""}|${!!style.bold}|${!!style.italic}`;
-    let resolved = this.styleCache.get(key);
-    if (!resolved) {
-      resolved = wasm.resolve_style(this.id, style);
-      this.styleCache.set(key, resolved);
-    }
-    return resolved;
-  }
+	/** Maps a weight/style onto this font's axes, or faux bold/italic parameters. */
+	resolveStyle(style: FontStyle = {}): ResolvedStyle {
+		const key = `${style.weight ?? ''}|${!!style.bold}|${!!style.italic}`;
+		let resolved = this.styleCache.get(key);
+		if (!resolved) {
+			resolved = wasm.resolve_style(this.id, style);
+			this.styleCache.set(key, resolved);
+		}
+		return resolved;
+	}
 
-  outline(glyphId: number, variations: Variations = {}): PathCmd[] {
-    const key = `${glyphId}|${this.apply(variations)}`;
-    let cmds = this.outlineCache.get(key);
-    if (!cmds) {
-      cmds = wasm.get_outline(this.id, glyphId);
-      this.outlineCache.set(key, cmds);
-    }
-    return cmds;
-  }
+	outline(glyphId: number, variations: Variations = {}): PathCmd[] {
+		const key = `${glyphId}|${this.apply(variations)}`;
+		let cmds = this.outlineCache.get(key);
+		if (!cmds) {
+			cmds = wasm.get_outline(this.id, glyphId);
+			this.outlineCache.set(key, cmds);
+		}
+		return cmds;
+	}
 
-  /** Glyph path in font units with y flipped to canvas orientation (y down). */
-  path(glyphId: number, variations: Variations = {}): Path2D {
-    const key = `${glyphId}|${variationKey(this.clamp(variations))}`;
-    let path = this.pathCache.get(key);
-    if (!path) {
-      path = outlineToPath2D(this.outline(glyphId, variations));
-      this.pathCache.set(key, path);
-    }
-    return path;
-  }
+	/** Glyph path in font units with y flipped to canvas orientation (y down). */
+	path(glyphId: number, variations: Variations = {}): Path2D {
+		const key = `${glyphId}|${variationKey(this.clamp(variations))}`;
+		let path = this.pathCache.get(key);
+		if (!path) {
+			path = outlineToPath2D(this.outline(glyphId, variations));
+			this.pathCache.set(key, path);
+		}
+		return path;
+	}
 
-  dispose(): void {
-    wasm.unload_font(this.id);
-    this.metricsCache.clear();
-    this.styleCache.clear();
-    this.outlineCache.clear();
-    this.pathCache.clear();
-  }
+	dispose(): void {
+		wasm.unload_font(this.id);
+		this.metricsCache.clear();
+		this.styleCache.clear();
+		this.outlineCache.clear();
+		this.pathCache.clear();
+	}
 
-  /** Drops unknown axes and clamps values to each axis range. */
-  private clamp(variations: Variations): Variations {
-    const out: Variations = {};
-    for (const [tag, value] of Object.entries(variations)) {
-      const axis = this.axis(tag);
-      if (axis) out[tag] = Math.min(axis.max, Math.max(axis.min, value));
-    }
-    return out;
-  }
+	/** Drops unknown axes and clamps values to each axis range. */
+	private clamp(variations: Variations): Variations {
+		const out: Variations = {};
+		for (const [tag, value] of Object.entries(variations)) {
+			const axis = this.axis(tag);
+			if (axis) out[tag] = Math.min(axis.max, Math.max(axis.min, value));
+		}
+		return out;
+	}
 
-  private apply(variations: Variations): string {
-    const clamped = this.clamp(variations);
-    const key = variationKey(clamped);
-    if (key !== this.appliedKey) {
-      wasm.reset_variations(this.id);
-      if (key) wasm.set_variations(this.id, clamped);
-      this.appliedKey = key;
-    }
-    return key;
-  }
+	private apply(variations: Variations): string {
+		const clamped = this.clamp(variations);
+		const key = variationKey(clamped);
+		if (key !== this.appliedKey) {
+			wasm.reset_variations(this.id);
+			if (key) wasm.set_variations(this.id, clamped);
+			this.appliedKey = key;
+		}
+		return key;
+	}
 }
 
 function variationKey(v: Variations): string {
-  return Object.keys(v)
-    .sort()
-    .map((tag) => `${tag}=${v[tag]}`)
-    .join(",");
+	return Object.keys(v)
+		.sort()
+		.map(tag => `${tag}=${v[tag]}`)
+		.join(',');
 }
 
 function outlineToPath2D(cmds: PathCmd[]): Path2D {
-  const p = new Path2D();
-  for (const cmd of cmds) {
-    if (cmd === "Close") {
-      p.closePath();
-    } else if ("MoveTo" in cmd) {
-      const [x, y] = cmd.MoveTo;
-      p.moveTo(x, -y);
-    } else if ("LineTo" in cmd) {
-      const [x, y] = cmd.LineTo;
-      p.lineTo(x, -y);
-    } else if ("QuadTo" in cmd) {
-      const [x1, y1, x, y] = cmd.QuadTo;
-      p.quadraticCurveTo(x1, -y1, x, -y);
-    } else {
-      const [x1, y1, x2, y2, x, y] = cmd.CubicTo;
-      p.bezierCurveTo(x1, -y1, x2, -y2, x, -y);
-    }
-  }
-  return p;
+	const p = new Path2D();
+	for (const cmd of cmds) {
+		if (cmd === 'Close') {
+			p.closePath();
+		} else if ('MoveTo' in cmd) {
+			const [x, y] = cmd.MoveTo;
+			p.moveTo(x, -y);
+		} else if ('LineTo' in cmd) {
+			const [x, y] = cmd.LineTo;
+			p.lineTo(x, -y);
+		} else if ('QuadTo' in cmd) {
+			const [x1, y1, x, y] = cmd.QuadTo;
+			p.quadraticCurveTo(x1, -y1, x, -y);
+		} else {
+			const [x1, y1, x2, y2, x, y] = cmd.CubicTo;
+			p.bezierCurveTo(x1, -y1, x2, -y2, x, -y);
+		}
+	}
+	return p;
 }
