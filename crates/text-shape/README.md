@@ -74,12 +74,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## What's included
 
-| | |
-| --- | --- |
-| `Font` | Load TTF/OTF/TTC; `metrics`, `variation_axes`, `set_variations`, `glyph_bbox`, `outline`, `resolve_style` |
-| `Font::shape` | Shape one run with direction, script, language and OpenType features |
-| `Font::layout` | Hard breaks, word or character wrapping, bidi reordering, alignment (`Start`/`End` follow the text direction), letter/word spacing, manual kerning of specific pairs (`LayoutOptions::kerning`), OpenType features on part of the text (`"kern[3:5]=0"`), loose and tight bounds |
-| `line_breaks`, `graphemes`, `bidi_line` | Where lines may break ([UAX #14](https://www.unicode.org/reports/tr14/)), where each user-perceived character starts ([UAX #29](https://www.unicode.org/reports/tr29/)), and how mixed-direction text is ordered ([UAX #9](https://www.unicode.org/reports/tr9/)) |
+|                                         |                                                                                                                                                                                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Font`                                  | Load TTF/OTF/TTC; `metrics`, `variation_axes`, `set_variations`, `glyph_bbox`, `outline`, `resolve_style`                                                                                                                                                                        |
+| `Font::shape`                           | Shape one run with direction, script, language and OpenType features                                                                                                                                                                                                             |
+| `Font::layout`                          | Hard breaks, word or character wrapping, bidi reordering, alignment (`Start`/`End` follow the text direction), letter/word spacing, manual kerning of specific pairs (`LayoutOptions::kerning`), OpenType features on part of the text (`"kern[3:5]=0"`), loose and tight bounds |
+| `line_breaks`, `graphemes`, `bidi_line` | Where lines may break ([UAX #14](https://www.unicode.org/reports/tr14/)), where each user-perceived character starts ([UAX #29](https://www.unicode.org/reports/tr29/)), and how mixed-direction text is ordered ([UAX #9](https://www.unicode.org/reports/tr9/))                |
 
 Text indices (glyph clusters, line ranges, break positions) are UTF-8 byte offsets
 into the input. Font values are in font units with y up; layout results are in px
