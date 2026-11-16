@@ -131,7 +131,8 @@ cargo test --workspace
 (cd site && npm run format:check && npm run build)
 ```
 
-Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+Changes are listed in each package's changelog:
+[crate](crates/text-shape/CHANGELOG.md) and [npm](js/CHANGELOG.md).
 
 ### Third-party notices
 
@@ -163,18 +164,26 @@ dependencies, licenses included, separately.
 
 ## Releasing
 
-The crate and the npm package are released together, with the same version:
+The crate and the npm package are versioned and released separately; release only
+the one that changed. The npm package builds the WebAssembly from the Rust source in
+this repository, so a Rust change that only matters to JavaScript users needs only an
+npm release.
 
-1. Set the version in `Cargo.toml` (`[workspace.package]`) and `js/package.json`.
-2. In `CHANGELOG.md`, turn `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD`.
-3. If Rust dependencies changed since the last release, update `THIRD_PARTY_NOTICES`
-   (see [Third-party notices](#third-party-notices)).
-4. Merge to `main`, then run the **Release** workflow from the Actions tab.
+| Package | Version in                           | Changelog                        | Workflow                | Tag            |
+| ------- | ------------------------------------ | -------------------------------- | ----------------------- | -------------- |
+| Crate   | `Cargo.toml` (`[workspace.package]`) | `crates/text-shape/CHANGELOG.md` | **Release crate**       | `crate-vX.Y.Z` |
+| npm     | `js/package.json`                    | `js/CHANGELOG.md`                | **Release npm package** | `npm-vX.Y.Z`   |
 
-The workflow checks the versions and the changelog, runs every test, creates the
-`vX.Y.Z` tag and GitHub release, and publishes to crates.io and npm. See
-`.github/workflows/release.yml` for the one-time registry setup; the very first
-version is published by hand.
+1. Set the version (for npm: `npm version x.y.z --no-git-tag-version` in `js/`).
+2. In the changelog, turn `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD`.
+3. For an npm release, if Rust dependencies changed since the last one, update
+   `THIRD_PARTY_NOTICES` (see [Third-party notices](#third-party-notices)).
+4. Merge to `main`, then run the workflow from the Actions tab.
+
+Each workflow checks the changelog, runs the tests, creates the tag and GitHub
+release, and publishes. See the comment at the top of
+`.github/workflows/release-crate.yml` and `release-npm.yml` for the one-time
+registry setup; each package's very first version is published by hand.
 
 ## License
 

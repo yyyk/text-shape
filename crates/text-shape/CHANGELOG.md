@@ -1,19 +1,12 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
+All notable changes to the `text-shape` Rust crate are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (while the version is 0.x, minor
 versions may change the API).
 
-The Rust crate (`text-shape` on crates.io) and the npm package (`text-shape` on
-npm) are released together with the same version number.
-
-## [0.1.1] - 2026-11-16
-
-### Added
-
-- npm package: `text-shape/package.json` is exported, for tools that read the
-  package's metadata.
+The npm package is versioned separately; see
+[its changelog](https://github.com/yyyk/text-shape/blob/main/js/CHANGELOG.md).
 
 ## [0.1.0] - 2026-11-16
 
@@ -43,9 +36,5 @@ First release.
   at least 700, so it shows even when a lighter weight is set.
 - Unicode segmentation on its own: where lines may break, where each
   user-perceived character starts, and how mixed-direction text is ordered.
-- npm package: a `Typography` API for settings, measurement and layout, with
-  `Font` caching of outlines and `Path2D`s. Works in browsers and Node 20+ with
-  no bundler setup: the WebAssembly is embedded. Text indices are UTF-16
-  offsets, so they work with `String.prototype.slice`.
 - Rust crate: the same engine as plain Rust (Rust 1.85+), with text indices as
   UTF-8 byte offsets and an optional `serde` feature.

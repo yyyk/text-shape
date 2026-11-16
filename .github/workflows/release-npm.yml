@@ -1,0 +1,95 @@
+# Release the npm package: run by hand from the Actions tab ("Run workflow") on main.
+#
+# Before running it, bump the version in js/package.json (`npm version x.y.z
+# --no-git-tag-version` in js/) and turn the "## [Unreleased]" in
+# js/CHANGELOG.md into a dated "## [x.y.z] - YYYY-MM-DD" entry, then merge that
+# to main. The workflow then:
+#
+#   1. checks the CHANGELOG entry exists and is dated, and the tag npm-vX.Y.Z
+#      doesn't exist yet;
+#   2. builds and tests the package (which runs the Rust tests too) and checks
+#      what would be published;
+#   3. creates the tag and a GitHub release with the CHANGELOG entry as notes;
+#   4. publishes to npm, with provenance.
+#
+# The package builds the WebAssembly from the Rust source in this repository, not
+# from the published crate, so the crate doesn't need releasing first.
+#
+# Publishing is last because it can't be undone; if it fails, retry it by hand
+# (or delete the release and tag and run the workflow again).
+#
+# Authentication uses trusted publishing (no tokens stored): in the package's
+# settings on npmjs.com, add this repository and the workflow file
+# `release-npm.yml` as a trusted publisher.
+name: Release npm package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # create the tag and the GitHub release
+  id-token: write # trusted publishing and provenance
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # all tags, to check the new one doesn't exist
+
+      - name: Check CHANGELOG and tag
+        id: version
+        run: |
+          version=$(node -p "require('./js/package.json').version")
+          changelog=js/CHANGELOG.md
+          if ! grep -qE "^## \[$version\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" "$changelog"; then
+            echo "::error::$changelog needs a dated entry: ## [$version] - YYYY-MM-DD"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/npm-v$version" >/dev/null; then
+            echo "::error::tag npm-v$version already exists"; exit 1
+          fi
+          # Release notes: the CHANGELOG entry, without its heading.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on && /^\[[^]]+\]: / { next }
+            on { print }
+          ' "$changelog" > release-notes.md
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Build, test, check contents
+        working-directory: js
+        run: |
+          npm ci
+          npm test
+          npm publish --dry-run
+
+      - name: Create the tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "npm-v${{ steps.version.outputs.version }}"
+          --target "$GITHUB_SHA"
+          --title "text-shape npm ${{ steps.version.outputs.version }}"
+          --notes-file release-notes.md
+
+      - name: Publish to npm
+        working-directory: js
+        run: npm publish --provenance --access public
