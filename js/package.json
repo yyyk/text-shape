@@ -1,6 +1,6 @@
 {
   "name": "text-shape",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Text layout and measurement (shaping, metrics, wrapping, bidi) on a Rust/WebAssembly core",
   "author": "yyyk",
   "license": "MIT",
@@ -34,7 +34,8 @@
       "types": "./wasm/text_shape.d.ts",
       "default": "./wasm/text_shape.js"
     },
-    "./text_shape_bg.wasm": "./wasm/text_shape_bg.wasm"
+    "./text_shape_bg.wasm": "./wasm/text_shape_bg.wasm",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

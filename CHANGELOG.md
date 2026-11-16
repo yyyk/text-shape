@@ -8,6 +8,13 @@ versions may change the API).
 The Rust crate (`text-shape` on crates.io) and the npm package (`text-shape` on
 npm) are released together with the same version number.
 
+## [0.1.1] - 2026-11-16
+
+### Added
+
+- npm package: `text-shape/package.json` is exported, for tools that read the
+  package's metadata.
+
 ## [0.1.0] - 2026-11-16
 
 First release.

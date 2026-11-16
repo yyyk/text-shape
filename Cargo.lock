@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "text-shape"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rustybuzz",
  "serde",
@@ -177,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "text-shape-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "js-sys",
  "serde",
