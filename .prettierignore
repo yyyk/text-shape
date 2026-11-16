@@ -1,0 +1,13 @@
+# Prettier formats only what CI checks: js/ with the Markdown, and site/ (with its
+# own ignore file).
+
+# Generated: build output, packages, and the WebAssembly module wasm-pack writes.
+node_modules/
+target/
+js/dist/
+js/wasm/
+site/dist/
+
+# Not format-checked by CI.
+.github/
+.vscode/

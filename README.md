@@ -7,10 +7,10 @@ The engine is written in Rust on [rustybuzz](https://github.com/harfbuzz/rustybu
 [ttf-parser](https://github.com/harfbuzz/ttf-parser), and is available for both Rust and
 JavaScript. Try it in the [playground](https://yyyk.github.io/text-shape/).
 
-| Package | For | Docs |
-| --- | --- | --- |
-| [`text-shape`](https://crates.io/crates/text-shape) (crates.io) | Rust | [crates/text-shape](crates/text-shape/README.md) |
-| [`text-shape`](https://www.npmjs.com/package/text-shape) (npm) | Browsers and Node, via WebAssembly | [js](js/README.md) |
+| Package                                                         | For                                | Docs                                             |
+| --------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------ |
+| [`text-shape`](https://crates.io/crates/text-shape) (crates.io) | Rust                               | [crates/text-shape](crates/text-shape/README.md) |
+| [`text-shape`](https://www.npmjs.com/package/text-shape) (npm)  | Browsers and Node, via WebAssembly | [js](js/README.md)                               |
 
 ## Features
 
@@ -46,10 +46,10 @@ let layout = font.layout("Hello world", &LayoutOptions {
 JavaScript:
 
 ```ts
-import { loadFont, Typography } from "text-shape";
+import { loadFont, Typography } from 'text-shape';
 
-const font = await loadFont("/fonts/Roboto-Regular.ttf");
-const layout = new Typography().textFont(font, 48).layout("Hello world", 0, 0, 300);
+const font = await loadFont('/fonts/Roboto-Regular.ttf');
+const layout = new Typography().textFont(font, 48).layout('Hello world', 0, 0, 300);
 ```
 
 Both return lines of positioned glyphs. See the package READMEs for drawing with
@@ -86,6 +86,11 @@ npm run dev                 # docs site and playground
 After changing Rust code, run `npm run build` in `js/` again; the site picks it up on
 reload. The site uses the npm package's TypeScript source directly, so TypeScript
 changes show up straight away.
+
+Formatting: Rust uses rustfmt (`cargo fmt`); TypeScript, HTML, CSS, JSON and
+Markdown use Prettier (`npm run format` in `js/` for the package and the Markdown, and
+in `site/`). With the Prettier and rust-analyzer extensions, VS Code formats on save
+(`.vscode/settings.json`).
 
 CI (`.github/workflows/ci.yml`) runs all of this on every push, plus Rust 1.85 (the
 minimum supported version), formatting, clippy and Node 20/22. Changes are listed in

@@ -58,9 +58,12 @@
     "test": "npm run build && node --test test/*.test.mjs",
     "prepublishOnly": "npm test && npm run test:rust",
     "test:rust": "cargo test --manifest-path ../Cargo.toml --workspace",
-    "prepack": "cp ../LICENSE ../THIRD_PARTY_NOTICES ."
+    "prepack": "cp ../LICENSE ../THIRD_PARTY_NOTICES .",
+    "format": "prettier --write --ignore-path ../.prettierignore \"**/*.{ts,mjs,json,md}\" ../README.md ../CHANGELOG.md ../fonts/README.md ../crates/text-shape/README.md",
+    "format:check": "prettier --check --ignore-path ../.prettierignore \"**/*.{ts,mjs,json,md}\" ../README.md ../CHANGELOG.md ../fonts/README.md ../crates/text-shape/README.md"
   },
   "devDependencies": {
+    "prettier": "^3.10.1",
     "typescript": "~5.9.3"
   }
 }
