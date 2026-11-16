@@ -1,0 +1,91 @@
+# Build and test everything on every push and pull request: the Rust crates
+# (Linux + macOS, plus the minimum supported Rust version), and the WebAssembly
+# module with the npm package, docs site and demo built on it.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  msrv:
+    name: Rust 1.85 (minimum supported)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # Keep in sync with rust-version in Cargo.toml.
+      - uses: dtolnay/rust-toolchain@1.85
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p text-shape
+      - run: cargo check -p text-shape-wasm --target wasm32-unknown-unknown
+
+  web:
+    name: WASM, npm package, site and demo
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            js/package-lock.json
+            site/package-lock.json
+            demo/package-lock.json
+
+      - name: npm package — build and test
+        working-directory: js
+        run: npm ci && npm test
+      - name: npm package — test on the oldest supported Node versions too
+        working-directory: js
+        run: |
+          npx -y node@20 --test test/*.test.mjs
+          npx -y node@22 --test test/*.test.mjs
+      - name: npm package — check what would be published
+        working-directory: js
+        run: npm pack --dry-run
+
+      - name: Docs site — build
+        working-directory: site
+        run: npm ci && npm run build
+      # The demo is built without its type check: it has unused variables kept
+      # for experimenting.
+      - name: Demo — build
+        working-directory: demo
+        run: npm ci && npx vite build

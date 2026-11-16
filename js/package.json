@@ -1,0 +1,66 @@
+{
+  "name": "text-shape",
+  "version": "0.1.0",
+  "description": "Text layout and measurement (shaping, metrics, wrapping, bidi) on a Rust/WebAssembly core",
+  "author": "yyyk",
+  "license": "MIT",
+  "keywords": [
+    "typography",
+    "text",
+    "shaping",
+    "harfbuzz",
+    "rustybuzz",
+    "wasm",
+    "font",
+    "bidi",
+    "canvas"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yyyk/text-shape.git",
+    "directory": "js"
+  },
+  "homepage": "https://yyyk.github.io/text-shape/",
+  "bugs": "https://github.com/yyyk/text-shape/issues",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./wasm": {
+      "types": "./wasm/text_shape.d.ts",
+      "default": "./wasm/text_shape.js"
+    },
+    "./text_shape_bg.wasm": "./wasm/text_shape_bg.wasm"
+  },
+  "files": [
+    "dist",
+    "src",
+    "wasm/*.js",
+    "wasm/*.d.ts",
+    "wasm/*.wasm",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build:wasm && npm run build:ts",
+    "build:wasm": "wasm-pack build ../crates/text-shape-wasm --target web --out-dir ../../js/wasm --out-name text_shape --no-pack && rm -f wasm/.gitignore && node scripts/embed-wasm.mjs",
+    "build:ts": "rm -rf dist && tsc -p .",
+    "dev": "tsc -p . --watch --preserveWatchOutput",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test && npm run test:rust",
+    "test:rust": "cargo test --manifest-path ../Cargo.toml --workspace",
+    "prepack": "cp ../LICENSE ../THIRD_PARTY_NOTICES ."
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

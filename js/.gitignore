@@ -1,0 +1,12 @@
+node_modules
+*.log
+.DS_Store
+
+# Build output
+dist
+wasm
+
+# Copied from the repository root by `npm pack` (prepack)
+LICENSE
+THIRD_PARTY_NOTICES
+*.tgz

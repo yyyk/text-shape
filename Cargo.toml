@@ -1,0 +1,19 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["yyyk"]
+rust-version = "1.85" # checked in CI
+repository = "https://github.com/yyyk/text-shape"
+homepage = "https://yyyk.github.io/text-shape/"
+
+[profile.release]
+# "s": 9% smaller WASM than the default 3 (794 vs 873 KB) and about 10% slower.
+# "z" is smaller still (729 KB) but 2.5x slower. Measured 2026-11-16.
+opt-level = "s"
+lto = true
+codegen-units = 1
