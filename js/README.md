@@ -16,17 +16,17 @@ npm install text-shape
 ## Usage
 
 ```ts
-import { loadFont, Typography, CENTER, TOP } from "text-shape";
+import { loadFont, Typography, CENTER, TOP } from 'text-shape';
 
-const font = await loadFont("/fonts/Roboto-Regular.ttf");
+const font = await loadFont('/fonts/Roboto-Regular.ttf');
 const t = new Typography().textFont(font, 48).textAlign(CENTER, TOP).textLeading(56);
 
 // Lines and positioned glyphs, wrapped to a 400 × 300 box at (50, 50)
-const layout = t.layout("Hello world, wrapped in a box", 50, 50, 400, 300);
+const layout = t.layout('Hello world, wrapped in a box', 50, 50, 400, 300);
 
-t.textWidth("Hi");        // tight (ink) width, px
-t.fontWidth("Hi");        // loose (advance) width, px
-t.textBounds("Hi", 0, 0); // { x, y, w, h }
+t.textWidth('Hi'); // tight (ink) width, px
+t.fontWidth('Hi'); // loose (advance) width, px
+t.textBounds('Hi', 0, 0); // { x, y, w, h }
 ```
 
 ### Drawing with Canvas 2D
@@ -35,7 +35,7 @@ t.textBounds("Hi", 0, 0); // { x, y, w, h }
 down. Place it at the glyph's pen position and scale it to px:
 
 ```ts
-import type { TextLayout } from "text-shape";
+import type { TextLayout } from 'text-shape';
 
 function drawText(ctx: CanvasRenderingContext2D, layout: TextLayout) {
   const { font, scale, variations, synthetic } = layout;
@@ -51,7 +51,7 @@ function drawText(ctx: CanvasRenderingContext2D, layout: TextLayout) {
       ctx.fill(path);
       if (synthetic.bold) {
         ctx.lineWidth = synthetic.bold; // font units
-        ctx.lineJoin = "round";
+        ctx.lineJoin = 'round';
         ctx.strokeStyle = ctx.fillStyle;
         ctx.stroke(path);
       }
@@ -60,7 +60,7 @@ function drawText(ctx: CanvasRenderingContext2D, layout: TextLayout) {
   }
 }
 
-ctx.fillStyle = "black";
+ctx.fillStyle = 'black';
 drawText(ctx, layout);
 ```
 
@@ -69,8 +69,8 @@ drawText(ctx, layout);
 For effects built on glyph shapes, `font.outline()` returns the raw path commands:
 
 ```ts
-const { lines, scale, font, variations } = t.layout("HELLO", 0, 0);
-for (const g of lines.flatMap((l) => l.glyphs)) {
+const { lines, scale, font, variations } = t.layout('HELLO', 0, 0);
+for (const g of lines.flatMap(l => l.glyphs)) {
   const outline = font.outline(g.id, variations); // font units, y up
   // each point (px, py) maps to canvas (g.x + px * scale, g.y - py * scale)
 }
@@ -84,7 +84,7 @@ character at `at` and the next one. Positions are UTF-16 offsets, as everywhere 
 this package.
 
 ```ts
-const text = "AVATAR";
+const text = 'AVATAR';
 t.layout(text, 0, 0, undefined, undefined, {
   kerning: [
     { at: 0, px: -4 }, // A–V 4px tighter
@@ -97,30 +97,30 @@ To turn kerning (or any OpenType feature) off for part of the text, give the
 feature a range:
 
 ```ts
-t.textProperty("fontFeatures", ["kern[0:2]=0"]); // no font kerning for "AV"
+t.textProperty('fontFeatures', ['kern[0:2]=0']); // no font kerning for "AV"
 ```
 
 ## API
 
 Setters are chainable; call them with no arguments to read the current value.
 
-| Function | Description |
-| --- | --- |
-| `loadFont(url, faceIndex?)`, `Font.fromBytes(bytes)` | Load a TTF/OTF (or a face from a TTC) |
-| `new Typography()` | Holds text settings; measures and lays out text |
-| `layout(str, x, y, maxWidth?, maxHeight?, extras?)` | Lines and positioned glyphs; wraps when `maxWidth` is given. `extras.kerning` adjusts specific character pairs |
-| `font.path(glyphId, variations?)`, `font.outline(glyphId, variations?)` | Glyph shape as a cached `Path2D`, or as raw path commands |
-| `textFont(font, size?)`, `textSize(px)`, `textLeading(px)` | Font, size and line spacing (leading defaults to 1.25 × size) |
-| `textAlign(h, v?)` | `START` (default) `END` `LEFT` `CENTER` `RIGHT` × `TOP` `CENTER` `BOTTOM` `BASELINE` (default). `START` and `END` follow the text direction, like CSS `text-align`: `START` is left for left-to-right text and right for right-to-left |
-| `textWrap(mode)` | `WORD` (break where the Unicode line breaking rules allow, [UAX #14](https://www.unicode.org/reports/tr14/)) or `CHAR` (between characters, keeping emoji and accented letters whole, [UAX #29](https://www.unicode.org/reports/tr29/)) |
-| `textDirection(dir)` | `"ltr"`, `"rtl"` or `"inherit"` (detect from text) |
-| `textWeight(n)` | `wght` axis of variable fonts; with `BOLD`, at least 700 |
-| `textStyle(style)` | `NORMAL` `ITALIC` `BOLD` `BOLDITALIC`: font axes when available, otherwise `layout().synthetic` says how to fake it |
-| `textProperty(name, value?)`, `textProperties(obj?)` | `fontKerning`, `fontVariantCaps`, `letterSpacing`, `wordSpacing`, `direction`, `fontFeatures`, `fontVariationSettings` |
-| `fontAscent()`, `fontDescent()` | Ascent/descent from the font's metrics |
-| `textAscent(str?)`, `textDescent(str?)` | Tight ascent/descent of the first line of `str`, or the font's if omitted |
-| `fontWidth(str)`, `fontBounds(...)` | Loose (advance-based) width and box |
-| `textWidth(str)`, `textBounds(...)` | Tight (ink) width and box |
+| Function                                                                | Description                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadFont(url, faceIndex?)`, `Font.fromBytes(bytes)`                    | Load a TTF/OTF (or a face from a TTC)                                                                                                                                                                                                   |
+| `new Typography()`                                                      | Holds text settings; measures and lays out text                                                                                                                                                                                         |
+| `layout(str, x, y, maxWidth?, maxHeight?, extras?)`                     | Lines and positioned glyphs; wraps when `maxWidth` is given. `extras.kerning` adjusts specific character pairs                                                                                                                          |
+| `font.path(glyphId, variations?)`, `font.outline(glyphId, variations?)` | Glyph shape as a cached `Path2D`, or as raw path commands                                                                                                                                                                               |
+| `textFont(font, size?)`, `textSize(px)`, `textLeading(px)`              | Font, size and line spacing (leading defaults to 1.25 × size)                                                                                                                                                                           |
+| `textAlign(h, v?)`                                                      | `START` (default) `END` `LEFT` `CENTER` `RIGHT` × `TOP` `CENTER` `BOTTOM` `BASELINE` (default). `START` and `END` follow the text direction, like CSS `text-align`: `START` is left for left-to-right text and right for right-to-left  |
+| `textWrap(mode)`                                                        | `WORD` (break where the Unicode line breaking rules allow, [UAX #14](https://www.unicode.org/reports/tr14/)) or `CHAR` (between characters, keeping emoji and accented letters whole, [UAX #29](https://www.unicode.org/reports/tr29/)) |
+| `textDirection(dir)`                                                    | `"ltr"`, `"rtl"` or `"inherit"` (detect from text)                                                                                                                                                                                      |
+| `textWeight(n)`                                                         | `wght` axis of variable fonts; with `BOLD`, at least 700                                                                                                                                                                                |
+| `textStyle(style)`                                                      | `NORMAL` `ITALIC` `BOLD` `BOLDITALIC`: font axes when available, otherwise `layout().synthetic` says how to fake it                                                                                                                     |
+| `textProperty(name, value?)`, `textProperties(obj?)`                    | `fontKerning`, `fontVariantCaps`, `letterSpacing`, `wordSpacing`, `direction`, `fontFeatures`, `fontVariationSettings`                                                                                                                  |
+| `fontAscent()`, `fontDescent()`                                         | Ascent/descent from the font's metrics                                                                                                                                                                                                  |
+| `textAscent(str?)`, `textDescent(str?)`                                 | Tight ascent/descent of the first line of `str`, or the font's if omitted                                                                                                                                                               |
+| `fontWidth(str)`, `fontBounds(...)`                                     | Loose (advance-based) width and box                                                                                                                                                                                                     |
+| `textWidth(str)`, `textBounds(...)`                                     | Tight (ink) width and box                                                                                                                                                                                                               |
 
 The measurements that take a string (`textAscent`, `textDescent`, `fontWidth`,
 `textWidth`, `fontBounds`, `textBounds`) accept the same optional `extras` as
@@ -152,8 +152,8 @@ instead (about 330 KB gzipped, and compiled while it downloads), pass it to
 `initText()` before loading fonts:
 
 ```ts
-import { initText } from "text-shape";
-import wasmUrl from "text-shape/text_shape_bg.wasm?url"; // Vite
+import { initText } from 'text-shape';
+import wasmUrl from 'text-shape/text_shape_bg.wasm?url'; // Vite
 
 await initText(wasmUrl);
 ```
@@ -162,11 +162,11 @@ In Node, `Path2D` is unavailable, so use `font.outline()` instead of `font.path(
 Layout and metrics work as in the browser:
 
 ```ts
-import { readFile } from "node:fs/promises";
-import { Font, initText, Typography } from "text-shape";
+import { readFile } from 'node:fs/promises';
+import { Font, initText, Typography } from 'text-shape';
 
 await initText();
-const font = Font.fromBytes(await readFile("Roboto-Regular.ttf"));
+const font = Font.fromBytes(await readFile('Roboto-Regular.ttf'));
 ```
 
 ## Development
