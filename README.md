@@ -1,5 +1,7 @@
 # text-shape
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Text layout and measurement: shaping, metrics, line breaking, bidi text, alignment and
 bounds. It positions glyphs and hands you their outlines; rendering is up to you.
 
