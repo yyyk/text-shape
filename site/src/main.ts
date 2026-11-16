@@ -279,4 +279,7 @@ form.addEventListener("input", (e) => {
   void render();
 });
 form.addEventListener("submit", (e) => e.preventDefault());
+// The canvas reads its colours from CSS when it draws, so redraw when the
+// system switches between light and dark.
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => void render());
 form.dispatchEvent(new Event("input"));
