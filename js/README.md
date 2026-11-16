@@ -1,5 +1,9 @@
 # text-shape
 
+[![npm](https://img.shields.io/npm/v/text-shape)](https://www.npmjs.com/package/text-shape)
+[![CI](https://github.com/yyyk/text-shape/actions/workflows/ci.yml/badge.svg)](https://github.com/yyyk/text-shape/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Text layout and measurement: shaping, metrics, wrapping, alignment and bidi text,
 built on a Rust/WebAssembly core
 ([rustybuzz](https://github.com/harfbuzz/rustybuzz) shaping, ttf-parser metrics and
