@@ -71,24 +71,47 @@ fonts/                   sample fonts (with licenses) for the tests and the site
 
 ## Development
 
-Requires [rustup](https://rustup.rs) with the `wasm32-unknown-unknown` target,
-[`wasm-pack`](https://github.com/wasm-bindgen/wasm-pack) and Node.js.
+Requires [rustup](https://rustup.rs) (Rust 1.85 or later) with the
+`wasm32-unknown-unknown` target, [`wasm-pack`](https://github.com/wasm-bindgen/wasm-pack)
+and Node.js 20 or later.
 
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
-
-cargo test                  # Rust tests and doctests
-
-cd js && npm install
-npm run build               # WASM + TypeScript build of the npm package
-
-cd ../site && npm install
-npm run dev                 # docs site and playground
 ```
 
-After changing Rust code, run `npm run build` in `js/` again; the site picks it up on
-reload. The site uses the npm package's TypeScript source directly, so TypeScript
+### Building
+
+The Rust crate builds with Cargo from the repository root:
+
+```sh
+cargo build --release       # all crates; output in target/
+cargo test                  # Rust tests and doctests
+```
+
+The npm package is built in `js/`, in two steps that `npm run build` runs together:
+
+```sh
+cd js && npm install
+npm run build:wasm          # wasm-pack build of crates/text-shape-wasm into js/wasm/
+npm run build:ts            # TypeScript into js/dist/
+npm run dev                 # optional: rebuild js/dist/ on TypeScript changes
+npm test                    # build, then run the JS tests
+npm pack                    # optional: a .tgz to install elsewhere
+```
+
+The docs site and playground need the WASM module from `js/` (`npm run build:wasm`)
+built first:
+
+```sh
+cd site && npm install
+npm run dev                 # dev server
+npm run build               # static site into site/dist/
+npm run preview             # serve the built site
+```
+
+After changing Rust code, run `npm run build:wasm` in `js/` again; the site picks it
+up on reload. The site uses the npm package's TypeScript source directly, so TypeScript
 changes show up straight away.
 
 Formatting: Rust uses rustfmt (`cargo fmt`); TypeScript, HTML, CSS, JSON and
@@ -97,8 +120,18 @@ in `site/`). With the Prettier and rust-analyzer extensions, VS Code formats on 
 (`.vscode/settings.json`).
 
 CI (`.github/workflows/ci.yml`) runs all of this on every push, plus Rust 1.85 (the
-minimum supported version), formatting, clippy and Node 20/22. Changes are listed in
-[CHANGELOG.md](CHANGELOG.md).
+minimum supported version), formatting, clippy and Node 20/22. To run the same checks
+locally before pushing:
+
+```sh
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings   # warnings fail CI
+cargo test --workspace
+(cd js && npm test && npm run format:check)
+(cd site && npm run format:check && npm run build)
+```
+
+Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ### Third-party notices
 
