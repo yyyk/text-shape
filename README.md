@@ -62,9 +62,7 @@ crates/text-shape/       layout engine (Rust crate)
 crates/text-shape-wasm/  WebAssembly bindings used by the npm package
 js/                      npm package: TypeScript API on top of the bindings
 site/                    docs site and playground (GitHub Pages)
-demo/                    Vite app that fills glyph outlines with packed circles
-fonts/                   sample fonts (with licenses) for the tests, site and demo
-experiments/             earlier prototypes, not built
+fonts/                   sample fonts (with licenses) for the tests and the site
 ```
 
 ## Development
@@ -83,14 +81,11 @@ npm run build               # WASM + TypeScript build of the npm package
 
 cd ../site && npm install
 npm run dev                 # docs site and playground
-
-cd ../demo && npm install
-npm run dev                 # circle-packing demo
 ```
 
-After changing Rust code, run `npm run build` in `js/` again; the site and demo pick
-it up on reload. The site uses the npm package's TypeScript source directly; the demo
-uses its build, so for TypeScript changes run `npm run dev` in `js/` to rebuild on save.
+After changing Rust code, run `npm run build` in `js/` again; the site picks it up on
+reload. The site uses the npm package's TypeScript source directly, so TypeScript
+changes show up straight away.
 
 CI (`.github/workflows/ci.yml`) runs all of this on every push, plus Rust 1.85 (the
 minimum supported version), formatting, clippy and Node 20/22. Changes are listed in
