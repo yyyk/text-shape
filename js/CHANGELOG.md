@@ -8,6 +8,27 @@ versions may change the API).
 The Rust crate is versioned separately; see
 [its changelog](https://github.com/yyyk/text-shape/blob/main/crates/text-shape/CHANGELOG.md).
 
+## [Unreleased]
+
+### Changed
+
+- Shaping now uses HarfRust, and fonts are read with read-fonts, instead of
+  rustybuzz and ttf-parser, which are no longer developed. The API is unchanged.
+- Outlines no longer end each contour with a line back to its start before
+  `Close`; `Close` draws that line, so the shape is the same.
+- In variable fonts, outlines and glyph bounds at axis values whose variations
+  have fractions are rounded to whole font units, as FreeType does, instead of
+  keeping half units: they move by at most half a unit.
+
+### Fixed
+
+- Kerning in variable fonts away from their default axis values now follows the
+  font's kerning variations, matching HarfBuzz; it was off by up to a few
+  hundred font units per line (e.g. "AV", "To" in Roboto Flex at `wght` 100).
+- `hidden` on variation axes now reads the font's hidden flag; it read the wrong
+  bit, so axes such as Roboto Flex's parametric ones (`XOPQ`, `YTUC`, ...) were
+  reported as not hidden.
+
 ## [0.1.1] - 2026-11-16
 
 ### Added

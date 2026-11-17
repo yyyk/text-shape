@@ -6,7 +6,7 @@
 
 Text layout and measurement: shaping, metrics, wrapping, alignment and bidi text,
 built on a Rust/WebAssembly core
-([rustybuzz](https://github.com/harfbuzz/rustybuzz) shaping, ttf-parser metrics and
+([HarfRust](https://github.com/harfbuzz/harfrust) shaping, read-fonts metrics and
 outlines, Unicode line breaking, bidi and grapheme segmentation).
 
 It positions glyphs and hands you their outlines; drawing is up to you (Canvas 2D,

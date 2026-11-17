@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use rustybuzz::Feature;
+use harfrust::Feature;
 
 use crate::error::Result;
 use crate::font::{Font, GlyphBBox};

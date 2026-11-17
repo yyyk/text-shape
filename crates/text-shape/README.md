@@ -1,7 +1,7 @@
 # text-shape
 
 Text shaping, metrics, Unicode segmentation and paragraph layout in pure Rust, built on
-[rustybuzz](https://crates.io/crates/rustybuzz) and [ttf-parser](https://crates.io/crates/ttf-parser).
+[HarfRust](https://crates.io/crates/harfrust) and [read-fonts](https://crates.io/crates/read-fonts).
 
 It positions glyphs and hands you their outlines; rendering is up to you.
 

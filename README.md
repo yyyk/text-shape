@@ -7,8 +7,8 @@
 Text layout and measurement: shaping, metrics, line breaking, bidi text, alignment and
 bounds. It positions glyphs and hands you their outlines; rendering is up to you.
 
-The engine is written in Rust on [rustybuzz](https://github.com/harfbuzz/rustybuzz) and
-[ttf-parser](https://github.com/harfbuzz/ttf-parser), and is available for both Rust and
+The engine is written in Rust on [HarfRust](https://github.com/harfbuzz/harfrust) and
+[read-fonts](https://github.com/googlefonts/fontations), and is available for both Rust and
 JavaScript. Try it in the [playground](https://yyyk.github.io/text-shape/).
 
 | Package                                                         | For                                | Docs                                             |
