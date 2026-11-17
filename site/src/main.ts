@@ -108,6 +108,20 @@ async function render() {
 	const font = await getFont(o.font as string);
 	if (id !== renderId) return; // a newer render started while the font loaded
 
+	// The weight only applies through a wght axis, and bold makes it at least
+	// 700: show the weight actually used.
+	const hasWght = !!font.axis('wght');
+	const weight = o.weight as number;
+	const bold = o.style === 'bold' || o.style === 'bolditalic';
+	control<HTMLInputElement>('weight').disabled = !hasWght;
+	const hint = document.querySelector<HTMLElement>('#weight-hint')!;
+	hint.textContent = !hasWght
+		? 'needs a wght axis'
+		: bold && weight < 700
+			? 'bold: drawn at 700'
+			: '';
+	hint.hidden = !hint.textContent;
+
 	const size = o.size as number;
 	const t = new Typography()
 		.textFont(font, size)
@@ -135,9 +149,9 @@ async function render() {
 	}
 	if (o.showGlyphs) drawOrigins(layout);
 
-	stats.textContent = describe(layout, font, o.weight as number);
+	stats.textContent = describe(layout);
 	saveToHash(o);
-	code.innerHTML = highlight(snippet(o, size, boxWidth, kerning), 'ts');
+	code.innerHTML = highlight(snippet(o, size, boxWidth, kerning, hasWght), 'ts');
 }
 
 /** The README's Canvas 2D drawing, with faux bold/italic. */
@@ -195,7 +209,7 @@ function drawOrigins(layout: TextLayout) {
 	}
 }
 
-function describe(layout: TextLayout, font: Font, weight: number): string {
+function describe(layout: TextLayout): string {
 	const widest = Math.max(...layout.lines.map(l => l.width));
 	const parts = [
 		`${layout.lines.length} ${layout.lines.length === 1 ? 'line' : 'lines'}`,
@@ -206,7 +220,6 @@ function describe(layout: TextLayout, font: Font, weight: number): string {
 	if (axes.length) parts.push(`axes: ${axes.join(', ')}`);
 	if (layout.synthetic.bold) parts.push('faux bold');
 	if (layout.synthetic.oblique) parts.push('faux italic');
-	if (!font.axis('wght') && weight !== 400) parts.push('weight needs a wght axis');
 	return parts.join(' · ');
 }
 
@@ -216,6 +229,7 @@ function snippet(
 	size: number,
 	boxWidth: number,
 	kerning: Kerning[],
+	hasWght: boolean,
 ) {
 	const calls = [`.textFont(font, ${size})`];
 	calls.push(
@@ -223,7 +237,7 @@ function snippet(
 	);
 	calls.push(`.textLeading(${+(size * (o.leading as number)).toFixed(2)})`);
 	if (o.wrap !== 'word') calls.push(`.textWrap(${String(o.wrap).toUpperCase()})`);
-	if (o.weight !== 400) calls.push(`.textWeight(${o.weight})`);
+	if (hasWght && o.weight !== 400) calls.push(`.textWeight(${o.weight})`);
 	if (o.style !== 'normal') calls.push(`.textStyle(${String(o.style).toUpperCase()})`);
 	if (o.direction !== 'inherit') calls.push(`.textDirection("${o.direction}")`);
 	if (o.spacing !== 0) calls.push(`.textProperty("letterSpacing", ${o.spacing})`);

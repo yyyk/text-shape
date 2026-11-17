@@ -207,6 +207,13 @@ th {
 .groups label > input[type='range'] {
 	grid-column: 2;
 }
+/* A note under a control, across its value column too. */
+.groups label > .hint {
+	grid-column: 2 / -1;
+	margin-top: -0.3rem;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
 .controls output {
 	min-width: 2.6em;
 	text-align: right;
