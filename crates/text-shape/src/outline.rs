@@ -1,6 +1,7 @@
 //! Glyph outlines.
 
-use ttf_parser::{GlyphId, OutlineBuilder};
+use read_fonts::model::glyph::outline::{DrawMemory, DrawOptions, PathSink};
+use read_fonts::types::GlyphId;
 
 use crate::font::Font;
 
@@ -19,7 +20,7 @@ struct PathCollector<'a> {
     cmds: &'a mut Vec<PathCmd>,
 }
 
-impl<'a> OutlineBuilder for PathCollector<'a> {
+impl<'a> PathSink for PathCollector<'a> {
     fn move_to(&mut self, x: f32, y: f32) {
         self.cmds.push(PathCmd::MoveTo(x, y));
     }
@@ -42,8 +43,23 @@ impl Font {
     /// Reflects current variations.
     pub fn outline(&self, glyph_id: u16) -> Vec<PathCmd> {
         let mut cmds = Vec::new();
-        self.face()
-            .outline_glyph(GlyphId(glyph_id), &mut PathCollector { cmds: &mut cmds });
+        if let Some(glyph) = self
+            .instance()
+            .outline_glyphs()
+            .get(GlyphId::new(glyph_id.into()))
+        {
+            // A glyph that fails to draw part way gets no outline, as before.
+            if glyph
+                .draw(
+                    &DrawOptions::new(),
+                    DrawMemory::default(),
+                    &mut PathCollector { cmds: &mut cmds },
+                )
+                .is_err()
+            {
+                cmds.clear();
+            }
+        }
         cmds
     }
 }

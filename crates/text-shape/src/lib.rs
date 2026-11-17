@@ -1,5 +1,5 @@
 //! Text shaping, metrics, Unicode segmentation and paragraph layout, built on
-//! [rustybuzz](https://docs.rs/rustybuzz) and [ttf-parser](https://docs.rs/ttf-parser).
+//! [HarfRust](https://docs.rs/harfrust) and [read-fonts](https://docs.rs/read-fonts).
 //!
 //! ```no_run
 //! use text_shape::{Font, HorizAlign, LayoutOptions};

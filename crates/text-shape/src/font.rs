@@ -2,8 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use rustybuzz::Variation;
-use ttf_parser::Tag;
+use harfrust::Tag;
+use read_fonts::TableProvider;
+use read_fonts::types::{GlyphId, NameId};
 
 use crate::error::{Error, Result};
 
@@ -17,78 +18,121 @@ pub const SYNTHETIC_OBLIQUE_DEGREES: f32 = 14.0;
 /// Variation axis values are part of the font's state: `set_variations` affects
 /// later `metrics`, `shape`, `outline` and `layout` calls.
 pub struct Font {
-    // Borrows from `_data`. Declared first so it is dropped first. Never handed
-    // out with its 'static lifetime.
-    face: rustybuzz::Face<'static>,
-    _data: Box<[u8]>,
+    /// The font at its default axis values.
+    base: harfrust::Font,
+    /// The font at the current axis values (`base` for a static font).
+    instance: harfrust::Font,
+    /// The current value of every axis, in `base`'s axis order.
+    values: Vec<(Tag, f32)>,
 }
 
 impl Font {
     /// Parses a TTF/OTF, or face `face_index` of a TTC.
     pub fn from_bytes(data: impl Into<Vec<u8>>, face_index: u32) -> Result<Self> {
-        let data = data.into().into_boxed_slice();
-        // SAFETY: the boxed slice's heap allocation never moves or changes while
-        // `data` is alive, and `face` (the only borrower) is dropped before it.
-        let slice: &'static [u8] = unsafe { std::slice::from_raw_parts(data.as_ptr(), data.len()) };
-        let face = rustybuzz::Face::from_slice(slice, face_index)
-            .ok_or_else(|| Error::new(format!("could not parse font (face index {face_index})")))?;
-        Ok(Self { face, _data: data })
+        let err = || Error::new(format!("could not parse font (face index {face_index})"));
+        let base = harfrust::Font::new(data.into(), face_index).ok_or_else(err)?;
+        // A font needs at least these to be drawn and shaped.
+        let tables = base.tables();
+        if tables.head().is_err() || tables.maxp().is_err() {
+            return Err(err());
+        }
+        let values = base
+            .axes()
+            .iter()
+            .map(|a| (a.tag(), a.default_value()))
+            .collect();
+        let instance = base.default_instance();
+        Ok(Self {
+            base,
+            instance,
+            values,
+        })
     }
 
-    pub(crate) fn face(&self) -> &rustybuzz::Face<'_> {
-        &self.face
+    /// The font at the current axis values.
+    pub(crate) fn instance(&self) -> &harfrust::Font {
+        &self.instance
     }
 
     pub fn units_per_em(&self) -> u16 {
-        self.face.units_per_em() as u16
+        self.instance.units_per_em()
     }
 
     /// Vertical metrics and basic info, in font units. Reflects current variations.
     pub fn metrics(&self) -> FontMetrics {
-        let face = &self.face;
-        let underline = face.underline_metrics();
-        let family_name = [
-            ttf_parser::name_id::TYPOGRAPHIC_FAMILY,
-            ttf_parser::name_id::FAMILY,
-        ]
-        .iter()
-        .find_map(|&id| {
-            face.names()
-                .into_iter()
-                .filter(|n| n.name_id == id && n.is_unicode())
-                .find_map(|n| n.to_string())
-        });
+        let font = &self.instance;
+        let tables = font.tables();
+        let metrics = font.metrics();
+        let style = font.style_metrics();
+        let os2 = tables.os2().ok();
+        let post = tables.post().ok();
+        // As FreeType does: OS/2's typographic metrics when it asks for them,
+        // otherwise hhea's.
+        let line = if metrics.use_typo_metrics {
+            metrics.typo_line.or(metrics.hhea_line)
+        } else {
+            metrics.hhea_line.or(metrics.typo_line)
+        };
+        let units = |v: read_fonts::types::F48Dot16| v.to_f32().round() as i16;
+        let family_name = [NameId::TYPOGRAPHIC_FAMILY_NAME, NameId::FAMILY_NAME]
+            .iter()
+            .find_map(|&id| {
+                font.names()
+                    .get(id)?
+                    .english_or_first()
+                    .map(|n| n.name().chars().collect::<String>())
+            });
+        let selection = os2.as_ref().map(|t| t.fs_selection());
+        let italic_angle = post.as_ref().map_or(0.0, |p| p.italic_angle().to_f32());
+        let global_bbox = tables.head().map_or(
+            GlyphBBox {
+                x_min: 0,
+                y_min: 0,
+                x_max: 0,
+                y_max: 0,
+            },
+            |h| GlyphBBox {
+                x_min: h.x_min(),
+                y_min: h.y_min(),
+                x_max: h.x_max(),
+                y_max: h.y_max(),
+            },
+        );
         FontMetrics {
             units_per_em: self.units_per_em(),
-            ascender: face.ascender(),
-            descender: face.descender(),
-            line_gap: face.line_gap(),
-            cap_height: face.capital_height(),
-            x_height: face.x_height(),
-            underline_position: underline.map(|u| u.position),
-            underline_thickness: underline.map(|u| u.thickness),
-            italic_angle: face.italic_angle(),
-            weight: face.weight().to_number(),
-            is_italic: face.is_italic(),
-            is_bold: face.is_bold(),
-            is_monospaced: face.is_monospaced(),
-            is_variable: face.is_variable(),
+            ascender: line.map_or(0, |l| units(l.ascender)),
+            descender: line.map_or(0, |l| units(l.descender)),
+            line_gap: line.map_or(0, |l| units(l.line_gap)),
+            cap_height: metrics.cap_height.map(units),
+            x_height: metrics.x_height.map(units),
+            underline_position: style.underline.map(|u| units(u.position)),
+            underline_thickness: style.underline.map(|u| units(u.thickness)),
+            italic_angle,
+            weight: os2.as_ref().map_or(400, |t| t.us_weight_class()),
+            // An italic angle also makes a font italic.
+            is_italic: selection
+                .is_some_and(|s| s.contains(read_fonts::tables::os2::SelectionFlags::ITALIC))
+                || italic_angle != 0.0,
+            is_bold: selection
+                .is_some_and(|s| s.contains(read_fonts::tables::os2::SelectionFlags::BOLD)),
+            is_monospaced: post.as_ref().is_some_and(|p| p.is_fixed_pitch() != 0),
+            is_variable: !self.base.axes().is_empty(),
             family_name,
-            global_bbox: face.global_bounding_box().into(),
+            global_bbox,
         }
     }
 
     /// Variation axes of a variable font (empty for static fonts).
     pub fn variation_axes(&self) -> Vec<VariationAxis> {
-        self.face
-            .variation_axes()
-            .into_iter()
+        self.base
+            .axes()
+            .iter()
             .map(|a| VariationAxis {
-                tag: String::from_utf8_lossy(&a.tag.to_bytes()).into_owned(),
-                min: a.min_value,
-                default: a.def_value,
-                max: a.max_value,
-                hidden: a.hidden,
+                tag: String::from_utf8_lossy(&a.tag().to_be_bytes()).into_owned(),
+                min: a.min_value(),
+                default: a.default_value(),
+                max: a.max_value(),
+                hidden: a.is_hidden(),
             })
             .collect()
     }
@@ -101,40 +145,55 @@ impl Font {
     /// Unlisted axes keep their current value. Errors on an unknown axis.
     pub fn set_variations(&mut self, values: &[(&str, f32)]) -> Result<()> {
         let axes = self.variation_axes();
-        let mut variations = Vec::with_capacity(values.len());
+        let mut updated = self.values.clone();
         for &(tag, value) in values {
-            let axis = axes
+            let index = axes
                 .iter()
-                .find(|a| a.tag == tag)
+                .position(|a| a.tag == tag)
                 .ok_or_else(|| Error::new(format!("font has no {tag:?} variation axis")))?;
-            variations.push(Variation {
-                tag: Tag::from_bytes_lossy(tag.as_bytes()),
-                value: value.clamp(axis.min, axis.max),
-            });
+            let axis = &axes[index];
+            updated[index].1 = value.clamp(axis.min, axis.max);
         }
-        self.face.set_variations(&variations);
+        self.apply(updated);
         Ok(())
     }
 
     /// Resets every axis to its default value.
     pub fn reset_variations(&mut self) {
-        let defaults: Vec<Variation> = self
-            .face
-            .variation_axes()
-            .into_iter()
-            .map(|a| Variation {
-                tag: a.tag,
-                value: a.def_value,
-            })
+        let defaults = self
+            .base
+            .axes()
+            .iter()
+            .map(|a| (a.tag(), a.default_value()))
             .collect();
-        self.face.set_variations(&defaults);
+        self.apply(defaults);
+    }
+
+    fn apply(&mut self, values: Vec<(Tag, f32)>) {
+        self.instance = self
+            .base
+            .instance_builder()
+            .variations(values.iter().copied())
+            .build();
+        self.values = values;
     }
 
     /// Ink bounds of a glyph in font units, or `None` for empty glyphs.
     pub fn glyph_bbox(&self, glyph_id: u16) -> Option<GlyphBBox> {
-        self.face
-            .glyph_bounding_box(ttf_parser::GlyphId(glyph_id))
-            .map(Into::into)
+        let e = self
+            .instance
+            .glyph_metrics()
+            .extents(GlyphId::new(glyph_id.into()))?;
+        if e.width == 0.0 && e.height == 0.0 {
+            return None;
+        }
+        let r = |v: f32| v.round() as i16;
+        Some(GlyphBBox {
+            x_min: r(e.x_bearing),
+            y_min: r(e.y_bearing - e.height),
+            x_max: r(e.x_bearing + e.width),
+            y_max: r(e.y_bearing),
+        })
     }
 
     /// Maps a requested weight/style onto this font: real axes (`wght`, `ital`,
@@ -182,17 +241,6 @@ pub struct GlyphBBox {
     pub y_min: i16,
     pub x_max: i16,
     pub y_max: i16,
-}
-
-impl From<ttf_parser::Rect> for GlyphBBox {
-    fn from(r: ttf_parser::Rect) -> Self {
-        Self {
-            x_min: r.x_min,
-            y_min: r.y_min,
-            x_max: r.x_max,
-            y_max: r.y_max,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -341,6 +389,42 @@ mod tests {
 
         font.reset_variations();
         assert_eq!(advance(&font, "Hamburg"), regular_width);
+    }
+
+    #[test]
+    fn variation_axes_report_the_hidden_flag() {
+        // Roboto Flex marks its parametric axes hidden in fvar (flag 0x0001).
+        let font = load_test_font("RobotoFlex.ttf");
+        let hidden: Vec<_> = font
+            .variation_axes()
+            .into_iter()
+            .filter(|a| a.hidden)
+            .map(|a| a.tag)
+            .collect();
+        assert_eq!(
+            hidden,
+            [
+                "XOPQ", "YOPQ", "XTRA", "YTUC", "YTLC", "YTAS", "YTDE", "YTFI"
+            ]
+        );
+        assert!(!font.axis("wght").unwrap().hidden);
+    }
+
+    #[test]
+    fn kerning_follows_the_font_variations() {
+        // Total advances, kerning included, as HarfBuzz gives them (measured in
+        // Chrome at 2048 px, Roboto Flex's units per em). Kerned pairs such as
+        // "AV" and "To" change with the axes.
+        const TEXT: &str = "AV To Wa Ye LT P. VA. 1234567890 ½ ¾ ‰";
+        let mut font = load_test_font("RobotoFlex.ttf");
+        assert_eq!(advance(&font, TEXT), 38635);
+        font.set_variations(&[("wght", 100.0)]).unwrap();
+        assert_eq!(advance(&font, TEXT), 38451);
+        font.set_variations(&[("wght", 1000.0)]).unwrap();
+        assert_eq!(advance(&font, TEXT), 41924);
+        font.set_variations(&[("wdth", 25.0), ("opsz", 144.0)])
+            .unwrap();
+        assert_eq!(advance(&font, TEXT), 33560, "wght stays at 1000");
     }
 
     #[test]

@@ -1,8 +1,8 @@
-//! Text shaping with rustybuzz.
+//! Text shaping with HarfRust.
 
 use std::str::FromStr;
 
-use rustybuzz::{Feature, Language, Script, UnicodeBuffer};
+use harfrust::{Buffer, Feature, Language, Script, ShapeOptions as HrOptions, ShaperFont};
 
 use crate::error::{Error, Result};
 use crate::font::{Font, GlyphBBox};
@@ -21,20 +21,20 @@ pub enum Direction {
 }
 
 impl Direction {
-    fn to_rb(self) -> rustybuzz::Direction {
+    fn to_hr(self) -> harfrust::Direction {
         match self {
-            Direction::Ltr => rustybuzz::Direction::LeftToRight,
-            Direction::Rtl => rustybuzz::Direction::RightToLeft,
-            Direction::Ttb => rustybuzz::Direction::TopToBottom,
-            Direction::Btt => rustybuzz::Direction::BottomToTop,
+            Direction::Ltr => harfrust::Direction::LeftToRight,
+            Direction::Rtl => harfrust::Direction::RightToLeft,
+            Direction::Ttb => harfrust::Direction::TopToBottom,
+            Direction::Btt => harfrust::Direction::BottomToTop,
         }
     }
 
-    fn from_rb(d: rustybuzz::Direction) -> Self {
+    fn from_hr(d: harfrust::Direction) -> Self {
         match d {
-            rustybuzz::Direction::RightToLeft => Direction::Rtl,
-            rustybuzz::Direction::TopToBottom => Direction::Ttb,
-            rustybuzz::Direction::BottomToTop => Direction::Btt,
+            harfrust::Direction::RightToLeft => Direction::Rtl,
+            harfrust::Direction::TopToBottom => Direction::Ttb,
+            harfrust::Direction::BottomToTop => Direction::Btt,
             _ => Direction::Ltr,
         }
     }
@@ -109,27 +109,32 @@ impl Font {
         language: Option<&str>,
         features: &[Feature],
     ) -> Result<ShapingResult> {
-        let face = self.face();
-        let mut buf = UnicodeBuffer::new();
+        let mut buf = Buffer::new();
         buf.push_str(text);
         if let Some(d) = direction {
-            buf.set_direction(d.to_rb());
+            buf.set_direction(d.to_hr());
         }
         if let Some(s) = script {
-            buf.set_script(Script::from_str(s).map_err(|e| Error::new(format!("{e}: {s:?}")))?);
+            buf.set_script(Some(
+                Script::from_str(s).map_err(|e| Error::new(format!("{e}: {s:?}")))?,
+            ));
         }
         if let Some(l) = language {
-            buf.set_language(Language::from_str(l).map_err(|e| Error::new(format!("{e}: {l:?}")))?);
+            buf.set_language(Some(
+                Language::from_str(l).map_err(|e| Error::new(format!("{e}: {l:?}")))?,
+            ));
         }
         // Fills in whatever wasn't set explicitly.
         buf.guess_segment_properties();
-        let direction = Direction::from_rb(buf.direction());
+        let direction = Direction::from_hr(buf.direction());
 
-        let glyph_buffer = rustybuzz::shape(face, features, buf);
-        let glyphs = glyph_buffer
+        let font = ShaperFont::new(self.instance());
+        harfrust::shape(&font, &mut buf, HrOptions::new().features(features))
+            .map_err(|e| Error::new(format!("could not shape text: {e}")))?;
+        let glyphs = buf
             .glyph_infos()
             .iter()
-            .zip(glyph_buffer.glyph_positions())
+            .zip(buf.glyph_positions())
             .map(|(info, pos)| {
                 let id = info.glyph_id as u16;
                 ShapedGlyph {
