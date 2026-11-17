@@ -8,7 +8,7 @@ versions may change the API).
 The Rust crate is versioned separately; see
 [its changelog](https://github.com/yyyk/text-shape/blob/main/crates/text-shape/CHANGELOG.md).
 
-## [Unreleased]
+## [0.1.2] - 2026-11-17
 
 ### Changed
 
@@ -68,3 +68,7 @@ First release.
   `Font` caching of outlines and `Path2D`s. Works in browsers and Node 20+ with
   no bundler setup: the WebAssembly is embedded. Text indices are UTF-16
   offsets, so they work with `String.prototype.slice`.
+
+[0.1.2]: https://github.com/yyyk/text-shape/releases/tag/v0.1.2
+[0.1.1]: https://github.com/yyyk/text-shape/releases/tag/v0.1.1
+[0.1.0]: https://github.com/yyyk/text-shape/releases/tag/v0.1.0
