@@ -3,7 +3,8 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
-use text_shape::{Font, FontStyle};
+use serde::Serialize;
+use text_shape::{Font, FontStyle, PathCmd};
 use wasm_bindgen::prelude::*;
 
 use crate::util::{from_js_or_default, js_err, to_js};
@@ -84,8 +85,68 @@ pub fn resolve_style(
     to_js(&with_font(font_id, |f| f.resolve_style(&style))?)
 }
 
-/// Glyph outline in font units (y up). Reflects current variations.
-#[wasm_bindgen(unchecked_return_type = "PathCmd[]")]
-pub fn get_outline(font_id: u32, glyph_id: u16) -> Result<JsValue, JsError> {
-    to_js(&with_font(font_id, |f| f.outline(glyph_id))?)
+/// A path command in the shape stroke-outline and vector-path-tools use.
+#[derive(Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum PathCommand {
+    MoveTo {
+        x: f32,
+        y: f32,
+    },
+    LineTo {
+        x: f32,
+        y: f32,
+    },
+    QuadTo {
+        cx: f32,
+        cy: f32,
+        x: f32,
+        y: f32,
+    },
+    CubicTo {
+        c1x: f32,
+        c1y: f32,
+        c2x: f32,
+        c2y: f32,
+        x: f32,
+        y: f32,
+    },
+    Close,
+}
+
+impl PathCommand {
+    /// `s` scales y: 1 keeps font units (y up), -1 flips to y down.
+    fn new(cmd: PathCmd, s: f32) -> Self {
+        match cmd {
+            PathCmd::MoveTo(x, y) => Self::MoveTo { x, y: y * s },
+            PathCmd::LineTo(x, y) => Self::LineTo { x, y: y * s },
+            PathCmd::QuadTo(cx, cy, x, y) => Self::QuadTo {
+                cx,
+                cy: cy * s,
+                x,
+                y: y * s,
+            },
+            PathCmd::CubicTo(c1x, c1y, c2x, c2y, x, y) => Self::CubicTo {
+                c1x,
+                c1y: c1y * s,
+                c2x,
+                c2y: c2y * s,
+                x,
+                y: y * s,
+            },
+            PathCmd::Close => Self::Close,
+        }
+    }
+}
+
+/// Glyph outline in font units, y up, or y down with `flip_y`. Reflects
+/// current variations.
+#[wasm_bindgen(unchecked_return_type = "PathCommand[]")]
+pub fn get_outline(font_id: u32, glyph_id: u16, flip_y: Option<bool>) -> Result<JsValue, JsError> {
+    let s = if flip_y.unwrap_or(false) { -1.0 } else { 1.0 };
+    let cmds: Vec<PathCommand> = with_font(font_id, |f| f.outline(glyph_id))?
+        .into_iter()
+        .map(|c| PathCommand::new(c, s))
+        .collect();
+    to_js(&cmds)
 }

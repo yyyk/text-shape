@@ -318,6 +318,16 @@ describe('Font caches', () => {
 		);
 	});
 
+	test('outline() flips y on request', () => {
+		const id = roboto.shape('H').glyphs[0].id;
+		const up = roboto.outline(id);
+		const down = roboto.outline(id, {}, { flipY: true });
+		assert.equal(up[0].type, 'moveTo');
+		assert.equal(up.at(-1).type, 'close');
+		assert.equal(down[0].x, up[0].x);
+		assert.equal(down[0].y, -up[0].y);
+	});
+
 	test('path() builds and caches a Path2D', () => {
 		const calls = [];
 		globalThis.Path2D = class {
@@ -344,7 +354,7 @@ describe('Font caches', () => {
 			assert.equal(calls[0][0], 'M');
 			assert.equal(calls.at(-1)[0], 'Z');
 			const [, , y] = calls[0];
-			const outlineY = roboto.outline(id)[0].MoveTo[1];
+			const outlineY = roboto.outline(id)[0].y;
 			assert.equal(y, -outlineY, 'y is flipped for canvas');
 		} finally {
 			delete globalThis.Path2D;

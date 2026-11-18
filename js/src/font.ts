@@ -5,7 +5,7 @@ import type {
 	InitInput,
 	LayoutOptions,
 	LayoutResult,
-	PathCmd,
+	PathCommand,
 	ResolvedStyle,
 	ShapeOptions,
 	ShapingResult,
@@ -51,7 +51,7 @@ export class Font {
 	private appliedKey = '';
 	private metricsCache = new Map<string, FontMetrics>();
 	private styleCache = new Map<string, ResolvedStyle>();
-	private outlineCache = new Map<string, PathCmd[]>();
+	private outlineCache = new Map<string, PathCommand[]>();
 	private pathCache = new Map<string, Path2D>();
 
 	private constructor(id: number) {
@@ -119,11 +119,16 @@ export class Font {
 		return resolved;
 	}
 
-	outline(glyphId: number, variations: Variations = {}): PathCmd[] {
-		const key = `${glyphId}|${this.apply(variations)}`;
+	/** Glyph outline in font units, y up, or y down with `flipY`. */
+	outline(
+		glyphId: number,
+		variations: Variations = {},
+		{ flipY = false } = {},
+	): PathCommand[] {
+		const key = `${glyphId}|${this.apply(variations)}|${flipY}`;
 		let cmds = this.outlineCache.get(key);
 		if (!cmds) {
-			cmds = wasm.get_outline(this.id, glyphId);
+			cmds = wasm.get_outline(this.id, glyphId, flipY);
 			this.outlineCache.set(key, cmds);
 		}
 		return cmds;
@@ -134,7 +139,7 @@ export class Font {
 		const key = `${glyphId}|${variationKey(this.clamp(variations))}`;
 		let path = this.pathCache.get(key);
 		if (!path) {
-			path = outlineToPath2D(this.outline(glyphId, variations));
+			path = outlineToPath2D(this.outline(glyphId, variations, { flipY: true }));
 			this.pathCache.set(key, path);
 		}
 		return path;
@@ -177,23 +182,25 @@ function variationKey(v: Variations): string {
 		.join(',');
 }
 
-function outlineToPath2D(cmds: PathCmd[]): Path2D {
+function outlineToPath2D(cmds: PathCommand[]): Path2D {
 	const p = new Path2D();
 	for (const cmd of cmds) {
-		if (cmd === 'Close') {
-			p.closePath();
-		} else if ('MoveTo' in cmd) {
-			const [x, y] = cmd.MoveTo;
-			p.moveTo(x, -y);
-		} else if ('LineTo' in cmd) {
-			const [x, y] = cmd.LineTo;
-			p.lineTo(x, -y);
-		} else if ('QuadTo' in cmd) {
-			const [x1, y1, x, y] = cmd.QuadTo;
-			p.quadraticCurveTo(x1, -y1, x, -y);
-		} else {
-			const [x1, y1, x2, y2, x, y] = cmd.CubicTo;
-			p.bezierCurveTo(x1, -y1, x2, -y2, x, -y);
+		switch (cmd.type) {
+			case 'moveTo':
+				p.moveTo(cmd.x, cmd.y);
+				break;
+			case 'lineTo':
+				p.lineTo(cmd.x, cmd.y);
+				break;
+			case 'quadTo':
+				p.quadraticCurveTo(cmd.cx, cmd.cy, cmd.x, cmd.y);
+				break;
+			case 'cubicTo':
+				p.bezierCurveTo(cmd.c1x, cmd.c1y, cmd.c2x, cmd.c2y, cmd.x, cmd.y);
+				break;
+			case 'close':
+				p.closePath();
+				break;
 		}
 	}
 	return p;

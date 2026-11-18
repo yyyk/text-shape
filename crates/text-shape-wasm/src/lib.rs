@@ -106,12 +106,12 @@ export interface ShapingResult {
   glyphs: ShapedGlyph[];
 }
 
-export type PathCmd =
-  | { MoveTo: [number, number] }
-  | { LineTo: [number, number] }
-  | { QuadTo: [number, number, number, number] }
-  | { CubicTo: [number, number, number, number, number, number] }
-  | "Close";
+export type PathCommand =
+  | { type: "moveTo"; x: number; y: number }
+  | { type: "lineTo"; x: number; y: number }
+  | { type: "quadTo"; cx: number; cy: number; x: number; y: number }
+  | { type: "cubicTo"; c1x: number; c1y: number; c2x: number; c2y: number; x: number; y: number }
+  | { type: "close" };
 
 export interface LineBreak {
   /** UTF-16 offset; a line may end right before this index. */
