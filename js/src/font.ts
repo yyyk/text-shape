@@ -51,7 +51,7 @@ export class Font {
 	private appliedKey = '';
 	private metricsCache = new Map<string, FontMetrics>();
 	private styleCache = new Map<string, ResolvedStyle>();
-	private outlineCache = new Map<string, PathCommand[]>();
+	private outlineCache = new Map<string, readonly Readonly<PathCommand>[]>();
 	private pathCache = new Map<string, Path2D>();
 
 	private constructor(id: number) {
@@ -124,7 +124,7 @@ export class Font {
 		glyphId: number,
 		variations: Variations = {},
 		{ flipY = false } = {},
-	): PathCommand[] {
+	): readonly Readonly<PathCommand>[] {
 		const key = `${glyphId}|${this.apply(variations)}|${flipY}`;
 		let cmds = this.outlineCache.get(key);
 		if (!cmds) {
@@ -182,7 +182,7 @@ function variationKey(v: Variations): string {
 		.join(',');
 }
 
-function outlineToPath2D(cmds: PathCommand[]): Path2D {
+function outlineToPath2D(cmds: readonly Readonly<PathCommand>[]): Path2D {
 	const p = new Path2D();
 	for (const cmd of cmds) {
 		switch (cmd.type) {

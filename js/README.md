@@ -72,13 +72,14 @@ drawText(ctx, layout);
 
 For effects built on glyph shapes, `font.outline()` returns the raw path commands,
 `{ type: 'moveTo', x, y }` and so on, the same shape stroke-outline uses. Pass
-`{ flipY: true }` to get them y down:
+`{ flipY: true }` to get them y down. The returned array is cached and read-only;
+map it to new commands rather than changing it:
 
 ```ts
 const { lines, scale, font, variations } = t.layout('HELLO', 0, 0);
 for (const g of lines.flatMap(l => l.glyphs)) {
-  const outline = font.outline(g.id, variations); // font units, y up
-  // each point (px, py) maps to canvas (g.x + px * scale, g.y - py * scale)
+  const outline = font.outline(g.id, variations, { flipY: true }); // font units, y down
+  // each point (px, py) maps to canvas (g.x + px * scale, g.y + py * scale)
 }
 ```
 

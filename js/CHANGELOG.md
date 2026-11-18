@@ -8,6 +8,13 @@ versions may change the API).
 The Rust crate is versioned separately; see
 [its changelog](https://github.com/yyyk/text-shape/blob/main/crates/text-shape/CHANGELOG.md).
 
+## [0.1.4] - 2026-11-18
+
+### Changed
+
+- `font.outline()` returns `readonly Readonly<PathCommand>[]`: the array is
+  cached, so changing it in place would change every later outline of that glyph.
+
 ## [0.1.3] - 2026-11-18
 
 ### Changed
@@ -81,6 +88,7 @@ First release.
   no bundler setup: the WebAssembly is embedded. Text indices are UTF-16
   offsets, so they work with `String.prototype.slice`.
 
+[0.1.4]: https://github.com/yyyk/text-shape/releases/tag/v0.1.4
 [0.1.3]: https://github.com/yyyk/text-shape/releases/tag/v0.1.3
 [0.1.2]: https://github.com/yyyk/text-shape/releases/tag/v0.1.2
 [0.1.1]: https://github.com/yyyk/text-shape/releases/tag/v0.1.1
