@@ -77,9 +77,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 |                                         |                                                                                                                                                                                                                                                                                  |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Font`                                  | Load TTF/OTF/TTC; `metrics`, `variation_axes`, `set_variations`, `glyph_bbox`, `outline`, `resolve_style`                                                                                                                                                                        |
+| Introspection                           | `Font::info`, `name`, `names`, `glyph_id`, `characters`, `glyph_name`, `glyph_by_name`, `features`, `scripts`, `named_instances`, `tables`                                                                                                                                       |
 | `Font::shape`                           | Shape one run with direction, script, language and OpenType features                                                                                                                                                                                                             |
 | `Font::layout`                          | Hard breaks, word or character wrapping, bidi reordering, alignment (`Start`/`End` follow the text direction), letter/word spacing, manual kerning of specific pairs (`LayoutOptions::kerning`), OpenType features on part of the text (`"kern[3:5]=0"`), loose and tight bounds |
 | `line_breaks`, `graphemes`, `bidi_line` | Where lines may break ([UAX #14](https://www.unicode.org/reports/tr14/)), where each user-perceived character starts ([UAX #29](https://www.unicode.org/reports/tr29/)), and how mixed-direction text is ordered ([UAX #9](https://www.unicode.org/reports/tr9/))                |
+
+A non-zero `letter_spacing` turns off optional ligatures (`liga`, `clig`, `dlig`,
+`hlig`), as in CSS; add `"liga"` to `features` to keep them. Contextual alternates
+(`calt`) stay on, as in Firefox and Safari, so script fonts still join their
+letters (Chrome turns `calt` off; add `"calt=0"` for that).
 
 Text indices (glyph clusters, line ranges, break positions) are UTF-8 byte offsets
 into the input. Font values are in font units with y up; layout results are in px

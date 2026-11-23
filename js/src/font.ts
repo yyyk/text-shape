@@ -1,10 +1,14 @@
 import initWasm, * as wasm from '../wasm/text_shape.js';
 import type {
+	FontInfo,
 	FontMetrics,
 	FontStyle,
+	FontTable,
 	InitInput,
 	LayoutOptions,
 	LayoutResult,
+	NameEntry,
+	NamedInstance,
 	PathCommand,
 	ResolvedStyle,
 	ShapeOptions,
@@ -53,6 +57,8 @@ export class Font {
 	private styleCache = new Map<string, ResolvedStyle>();
 	private outlineCache = new Map<string, readonly Readonly<PathCommand>[]>();
 	private pathCache = new Map<string, Path2D>();
+	/** Introspection results, which don't depend on variations. */
+	private infoCache = new Map<string, unknown>();
 
 	private constructor(id: number) {
 		this.id = id;
@@ -145,12 +151,87 @@ export class Font {
 		return path;
 	}
 
+	// -------------------------------------------------------------------------
+	// Introspection. Results are cached and read-only; none depend on variations.
+	// -------------------------------------------------------------------------
+
+	/** Names and basic facts from the `name`, `head` and `OS/2` tables. */
+	info(): Readonly<FontInfo> {
+		return this.cached('info', () => wasm.get_font_info(this.id));
+	}
+
+	/**
+	 * A name from the `name` table by ID (1 family, 2 subfamily, 4 full name, 9
+	 * designer, 13 license, ...), in US English if available.
+	 */
+	name(id: number): string | undefined {
+		return this.cached(`name|${id}`, () => wasm.get_name(this.id, id));
+	}
+
+	/** Every decodable string in the `name` table, with its language. */
+	names(): readonly Readonly<NameEntry>[] {
+		return this.cached('names', () => wasm.get_names(this.id));
+	}
+
+	/** The glyph for a character (the first one of a string) or code point, or undefined. */
+	glyphId(char: string | number): number | undefined {
+		const cp = typeof char === 'number' ? char : char.codePointAt(0);
+		return cp === undefined ? undefined : wasm.get_glyph_id(this.id, cp);
+	}
+
+	/** Every code point the font's character map covers, in order. */
+	characters(): readonly number[] {
+		return this.cached('characters', () => Array.from(wasm.get_characters(this.id)));
+	}
+
+	/** The glyph's name from the `post` or `CFF` table, e.g. "a.ss01", or undefined. */
+	glyphName(glyphId: number): string | undefined {
+		return wasm.get_glyph_name(this.id, glyphId);
+	}
+
+	/** The glyph with this name, e.g. "a.ss01", or undefined. */
+	glyphByName(name: string): number | undefined {
+		return wasm.get_glyph_by_name(this.id, name);
+	}
+
+	/**
+	 * OpenType feature tags in the font's `GSUB` and `GPOS` tables, sorted, e.g.
+	 * `["kern", "liga", "smcp", ...]`: the ones `fontFeatures` can turn on or off.
+	 */
+	features(): readonly string[] {
+		return this.cached('features', () => wasm.get_features(this.id));
+	}
+
+	/** OpenType script tags in `GSUB` and `GPOS`, sorted, e.g. `["DFLT", "arab", "latn"]`. */
+	scripts(): readonly string[] {
+		return this.cached('scripts', () => wasm.get_scripts(this.id));
+	}
+
+	/**
+	 * Named instances of a variable font, e.g. "Bold Condensed", with the axis
+	 * values to pass as `variations` (or `fontVariationSettings`). Empty for static fonts.
+	 */
+	namedInstances(): readonly Readonly<NamedInstance>[] {
+		return this.cached('instances', () => wasm.get_named_instances(this.id));
+	}
+
+	/** The font's tables, in directory order, with their sizes in bytes. */
+	tables(): readonly Readonly<FontTable>[] {
+		return this.cached('tables', () => wasm.get_tables(this.id));
+	}
+
 	dispose(): void {
 		wasm.unload_font(this.id);
 		this.metricsCache.clear();
 		this.styleCache.clear();
 		this.outlineCache.clear();
 		this.pathCache.clear();
+		this.infoCache.clear();
+	}
+
+	private cached<T>(key: string, compute: () => T): T {
+		if (!this.infoCache.has(key)) this.infoCache.set(key, compute());
+		return this.infoCache.get(key) as T;
 	}
 
 	/** Drops unknown axes and clamps values to each axis range. */

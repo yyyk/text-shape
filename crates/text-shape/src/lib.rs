@@ -28,6 +28,7 @@
 
 mod error;
 mod font;
+mod info;
 mod layout;
 mod outline;
 mod segmentation;
@@ -38,6 +39,7 @@ pub use font::{
     Font, FontMetrics, FontStyle, GlyphBBox, ResolvedStyle, SYNTHETIC_BOLD_EM,
     SYNTHETIC_OBLIQUE_DEGREES, Synthetic, VariationAxis,
 };
+pub use info::{FontInfo, FontTable, NameEntry, NamedInstance};
 pub use layout::{
     Bounds, HorizAlign, Kerning, LayoutLine, LayoutOptions, PositionedGlyph, TextLayout, VertAlign,
     WrapMode,

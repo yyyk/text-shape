@@ -52,7 +52,10 @@ export interface TextProperties {
 		| 'all-petite-caps'
 		| 'unicase'
 		| 'titling-caps';
-	/** px, or a CSS length string in px such as "2px" */
+	/**
+	 * px, or a CSS length string in px such as "2px". When non-zero, optional
+	 * ligatures are off, as in CSS, unless `fontFeatures` turns them on.
+	 */
 	letterSpacing: number | string;
 	wordSpacing: number | string;
 	direction: TextDirectionSetting;

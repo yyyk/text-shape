@@ -149,6 +149,29 @@ describe('Typography settings', () => {
 		);
 	});
 
+	test('letterSpacing turns optional ligatures off, as in CSS', () => {
+		const glyphs = t => t.layout('fi', 0, 0).lines[0].glyphs.length;
+		assert.equal(glyphs(typo()), 1);
+		assert.equal(glyphs(typo().textProperty('letterSpacing', 4)), 2);
+		assert.equal(
+			glyphs(typo().textProperties({ letterSpacing: 4, fontFeatures: ['liga'] })),
+			1,
+			'unless asked for',
+		);
+	});
+
+	test('wrapped lines fit when shaping changes at the break', () => {
+		// Arabic letters take wider final forms at a line end.
+		const text = 'مرحبا بالعالم كيف حالك اليوم';
+		for (let max = 60; max < 400; max += 7) {
+			const l = typo(arabic).textWrap(CHAR).layout(text, 0, 0, max);
+			assert.ok(
+				l.lines.every(line => line.width <= max),
+				`at ${max}px`,
+			);
+		}
+	});
+
 	test('textDirection sets the paragraph base direction', () => {
 		assert.equal(typo().layout('abc', 0, 0).lines[0].direction, 'ltr');
 		assert.equal(typo().textDirection('rtl').layout('abc', 0, 0).lines[0].direction, 'rtl');
@@ -303,6 +326,42 @@ describe('indices are UTF-16 offsets', () => {
 			raw.line_breaks('😀 a').map(b => b.index),
 			[3, 4],
 		);
+	});
+});
+
+describe('introspection', () => {
+	test('info and names', () => {
+		const info = roboto.info();
+		assert.equal(info.family_name, 'Roboto');
+		assert.equal(info.subfamily_name, 'Regular');
+		assert.equal(info.weight_class, 400);
+		assert.ok(new Date(info.created * 1000).getFullYear() > 2000);
+		assert.equal(roboto.info(), info, 'cached');
+		assert.equal(roboto.name(1), 'Roboto');
+		assert.equal(roboto.name(60000), undefined);
+		assert.ok(roboto.names().some(n => n.id === 1 && n.language === 'en-US'));
+	});
+
+	test('characters and glyphs', () => {
+		const a = roboto.glyphId('a');
+		assert.equal(a, roboto.shape('a').glyphs[0].id);
+		assert.equal(roboto.glyphId(0x61), a);
+		assert.equal(roboto.glyphId('\u{10FFFF}'), undefined);
+		assert.equal(roboto.glyphId(''), undefined);
+		assert.ok(roboto.characters().includes(0xe9));
+		const flexA = flex.glyphId('a');
+		assert.equal(flex.glyphName(flexA), 'uni0061');
+		assert.equal(flex.glyphByName('uni0061'), flexA);
+		assert.equal(roboto.glyphName(a), undefined, 'Roboto has no glyph names');
+	});
+
+	test('features, scripts, named instances and tables', () => {
+		assert.ok(['kern', 'liga', 'smcp'].every(f => roboto.features().includes(f)));
+		assert.ok(arabic.scripts().includes('arab'));
+		assert.deepEqual(roboto.namedInstances(), []);
+		const bold = flex.namedInstances().find(i => i.name === 'Bold');
+		assert.equal(bold.variations.wght, 700);
+		assert.ok(roboto.tables().some(t => t.tag === 'glyf' && t.length > 0));
 	});
 });
 

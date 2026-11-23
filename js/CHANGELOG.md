@@ -8,6 +8,33 @@ versions may change the API).
 The Rust crate is versioned separately; see
 [its changelog](https://github.com/yyyk/text-shape/blob/main/crates/text-shape/CHANGELOG.md).
 
+## [0.1.5] - 2026-11-23
+
+### Added
+
+- Font introspection: `font.info()` (names, version, vendor, weight and width
+  class, embedding bits, dates, glyph count), `name()` and `names()` (the `name`
+  table, with languages), `glyphId()` and `characters()` (the character map),
+  `glyphName()` and `glyphByName()`, `features()` and `scripts()` (from `GSUB`
+  and `GPOS`), `namedInstances()` of variable fonts, and `tables()` (the table
+  directory). The raw functions (`get_font_info`, `get_names`, ...) are in
+  `text-shape/wasm`.
+
+### Changed
+
+- A non-zero `letterSpacing` turns off optional ligatures (`liga`, `clig`,
+  `dlig`, `hlig`), as in CSS, so spaced-out text no longer keeps "fi" squeezed
+  together. Turn one back on with `fontFeatures`, e.g. `['liga']`.
+- The WASM binary is about 7% larger (30 KB gzipped) for the introspection
+  functions.
+
+### Fixed
+
+- Wrapped lines no longer come out wider than `maxWidth` when shaping changes at
+  the break: Arabic letters taking their wider final form at a line end (by up
+  to 33px at 48px with `CHAR` wrapping), or kerning between the letters either
+  side of a `CHAR` break.
+
 ## [0.1.4] - 2026-11-18
 
 ### Changed
@@ -88,6 +115,7 @@ First release.
   no bundler setup: the WebAssembly is embedded. Text indices are UTF-16
   offsets, so they work with `String.prototype.slice`.
 
+[0.1.5]: https://github.com/yyyk/text-shape/releases/tag/v0.1.5
 [0.1.4]: https://github.com/yyyk/text-shape/releases/tag/v0.1.4
 [0.1.3]: https://github.com/yyyk/text-shape/releases/tag/v0.1.3
 [0.1.2]: https://github.com/yyyk/text-shape/releases/tag/v0.1.2

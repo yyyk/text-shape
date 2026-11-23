@@ -24,6 +24,8 @@ pub struct Font {
     instance: harfrust::Font,
     /// The current value of every axis, in `base`'s axis order.
     values: Vec<(Tag, f32)>,
+    /// Which face of a collection this is.
+    face_index: u32,
 }
 
 impl Font {
@@ -46,7 +48,17 @@ impl Font {
             base,
             instance,
             values,
+            face_index,
         })
+    }
+
+    /// The font at its default axis values.
+    pub(crate) fn base(&self) -> &harfrust::Font {
+        &self.base
+    }
+
+    pub(crate) fn face_index(&self) -> u32 {
+        self.face_index
     }
 
     /// The font at the current axis values.

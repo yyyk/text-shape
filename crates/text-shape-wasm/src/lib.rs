@@ -6,6 +6,7 @@
 //! with `String.slice`.
 
 mod font;
+mod info;
 mod layout;
 mod segmentation;
 mod shaping;
@@ -41,6 +42,62 @@ export interface FontMetrics {
   is_variable: boolean;
   family_name: string | null;
   global_bbox: GlyphBBox;
+}
+
+/** Names and basic facts from the `name`, `head` and `OS/2` tables. */
+export interface FontInfo {
+  /** Typographic family name if the font has one, otherwise the family name. */
+  family_name: string | null;
+  /** Typographic subfamily name if the font has one, otherwise the subfamily name, e.g. "Bold Italic". */
+  subfamily_name: string | null;
+  full_name: string | null;
+  postscript_name: string | null;
+  /** The version string, e.g. "Version 3.011". */
+  version: string | null;
+  /** `head.fontRevision`, e.g. 3.011. */
+  font_revision: number;
+  /** Four-character vendor ID from `OS/2`, e.g. "GOOG", trailing spaces trimmed. */
+  vendor_id: string | null;
+  /** `OS/2` weight class: 100 (thin) to 900 (black), 400 regular, 700 bold. */
+  weight_class: number | null;
+  /** `OS/2` width class: 1 (ultra-condensed) to 9 (ultra-expanded), 5 normal. */
+  width_class: number | null;
+  /** `OS/2.fsType` embedding permission bits; 0 = installable. */
+  embedding: number | null;
+  /** Creation date from `head`, in seconds since the Unix epoch (`new Date(created * 1000)`). */
+  created: number | null;
+  modified: number | null;
+  num_glyphs: number;
+}
+
+/** One localized string from the `name` table. */
+export interface NameEntry {
+  /**
+   * Name ID: 0 copyright, 1 family, 2 subfamily, 4 full name, 5 version, 6 PostScript
+   * name, 9 designer, 13 license, 16/17 typographic family and subfamily, 256 and up
+   * for font-specific names (axes, instances, ...).
+   */
+  id: number;
+  /** BCP 47 language tag, e.g. "en-US", or null if unknown. */
+  language: string | null;
+  value: string;
+}
+
+/** A predefined location of a variable font, e.g. "Bold Condensed". */
+export interface NamedInstance {
+  /** Subfamily name, e.g. "Bold Condensed". */
+  name: string | null;
+  postscript_name: string | null;
+  /** The value of every axis; pass to `set_variations`. */
+  variations: Record<string, number>;
+}
+
+/** An entry in the font's table directory. */
+export interface FontTable {
+  /** Four-character tag, e.g. "glyf", "CFF " (with its trailing space). */
+  tag: string;
+  /** Size in bytes. */
+  length: number;
 }
 
 export interface VariationAxis {
@@ -143,7 +200,10 @@ export interface LayoutOptions {
   size?: number;
   /** Distance between baselines. Defaults to 1.25 × size. */
   leading?: number | null;
-  /** Added after every cluster. */
+  /**
+   * Added after every cluster. When non-zero, optional ligatures (liga, clig, dlig,
+   * hlig) are off, as in CSS, unless `features` turns them on.
+   */
   letter_spacing?: number;
   /** Added after every space. */
   word_spacing?: number;

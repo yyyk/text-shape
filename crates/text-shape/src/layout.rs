@@ -70,7 +70,9 @@ pub struct LayoutOptions {
     pub size: f32,
     /// Distance between baselines. Defaults to 1.25 × `size`.
     pub leading: Option<f32>,
-    /// Added after every cluster.
+    /// Added after every cluster. When non-zero, optional ligatures (`liga`,
+    /// `clig`, `dlig`, `hlig`) are off, as in CSS, unless `features` turns
+    /// them on.
     pub letter_spacing: f32,
     /// Added after every space.
     pub word_spacing: f32,
@@ -199,13 +201,6 @@ impl TextLayout {
     }
 }
 
-struct LineRange<'a> {
-    para: &'a str,
-    para_start: usize,
-    start: usize,
-    end: usize,
-}
-
 impl Font {
     /// Lays out `text`. Hard breaks always start a new line; with `max_width`,
     /// lines also wrap per `options.wrap`. Uses the font's current variations.
@@ -215,60 +210,31 @@ impl Font {
         let ascent = f32::from(metrics.ascender) * scale;
         let descent = -f32::from(metrics.descender) * scale;
         let leading = options.leading.unwrap_or(options.size * 1.25);
-        let features = parse_features(&options.features)?;
+        let features = layout_features(options)?;
 
-        // 1. Break into lines (logical ranges, trailing whitespace trimmed).
-        let mut ranges = Vec::new();
+        // 1. Break into lines and shape each one in visual order.
+        let mut lines = Vec::new();
         for (para_start, para) in paragraphs(text) {
-            let line_ranges = match options.max_width {
-                None => vec![(0, para.len())],
-                Some(max_width) => {
-                    self.wrap_paragraph(para, para_start, max_width, options, &features, scale)?
-                }
-            };
-            for (start, end) in line_ranges {
-                ranges.push(LineRange {
+            match options.max_width {
+                None => lines.push(self.place_line(
                     para,
                     para_start,
-                    start,
-                    end: trim_end(para, start, end),
-                });
+                    0,
+                    para.len(),
+                    options,
+                    &features,
+                    scale,
+                )?),
+                Some(max_width) => lines.extend(
+                    self.wrap_paragraph(para, para_start, max_width, options, &features, scale)?,
+                ),
             }
         }
-
-        // 2. Shape each line in visual order.
-        let mut lines = Vec::with_capacity(ranges.len());
-        for (i, r) in ranges.iter().enumerate() {
-            let bidi = bidi_line(r.para, options.direction, r.start..r.end);
-            let mut glyphs = Vec::new();
-            let mut pen = 0.0f64;
-            for run in &bidi.runs {
-                let placed =
-                    self.place_run(r.para, r.para_start, run, options, &features, scale)?;
-                for p in placed.glyphs {
-                    glyphs.push(PositionedGlyph {
-                        id: p.glyph.id,
-                        cluster: r.para_start + run.start + p.glyph.cluster,
-                        x: (pen + p.x) as f32,
-                        y: -(p.glyph.y_offset as f32) * scale,
-                        bbox: p.glyph.bbox,
-                    });
-                }
-                pen += placed.width;
-            }
-            lines.push(LayoutLine {
-                start: r.para_start + r.start,
-                end: r.para_start + r.end,
-                x: 0.0,
-                baseline: i as f32 * leading,
-                width: pen as f32,
-                direction: bidi.base_direction,
-                glyphs,
-                ink: None,
-            });
+        for (i, line) in lines.iter_mut().enumerate() {
+            line.baseline = i as f32 * leading;
         }
 
-        // 3. Align.
+        // 2. Align.
         let top = -ascent;
         let bottom = (lines.len().max(1) - 1) as f32 * leading + descent;
         let y = options.y;
@@ -301,7 +267,7 @@ impl Font {
             line.ink = ink_bounds(&line.glyphs, scale);
         }
 
-        // 4. Bounds.
+        // 3. Bounds.
         let advance = union(lines.iter().map(|l| Bounds {
             x: l.x,
             y: l.baseline - ascent,
@@ -335,49 +301,97 @@ impl Font {
         options: &LayoutOptions,
         features: &[Feature],
         scale: f32,
-    ) -> Result<Vec<(usize, usize)>> {
+    ) -> Result<Vec<LayoutLine>> {
+        let line =
+            |s: usize, e: usize| self.place_line(para, para_start, s, e, options, features, scale);
         if para.is_empty() {
-            return Ok(vec![(0, 0)]);
+            return Ok(vec![line(0, 0)?]);
         }
 
         let prefix = self.advance_prefix(para, para_start, options, features, scale)?;
-        let width = |s: usize, e: usize| prefix[e] - prefix[s];
-        let fits = |s: usize, e: usize| width(s, trim_end(para, s, e)) <= f64::from(max_width);
-        let candidates: Vec<usize> = match options.wrap {
+        let estimate_fits =
+            |s: usize, e: usize| prefix[trim_end(para, s, e)] - prefix[s] <= f64::from(max_width);
+        let mut candidates: Vec<usize> = match options.wrap {
             WrapMode::Char => graphemes(para).into_iter().skip(1).collect(),
             WrapMode::Word => line_breaks(para).into_iter().map(|b| b.index).collect(),
         };
+        if candidates.last() != Some(&para.len()) {
+            candidates.push(para.len());
+        }
 
         let mut lines = Vec::new();
         let mut start = 0;
-        let mut last_fit = None;
-        for c in candidates {
-            if fits(start, c) {
-                last_fit = Some(c);
-                continue;
+        // Index of the first candidate after `start`.
+        let mut first = 0;
+        while first < candidates.len() {
+            // The furthest candidate that fits by the estimate. The first one is
+            // taken even if it doesn't: a single unbreakable segment wider than
+            // the box overflows.
+            let mut last = first;
+            while last + 1 < candidates.len() && estimate_fits(start, candidates[last + 1]) {
+                last += 1;
             }
-            if let Some(fit) = last_fit.filter(|&f| f > start) {
-                lines.push((start, fit));
-                start = fit;
+            // The line on its own can come out wider than the estimate, when
+            // shaping changes at its ends (kerning across the break, Arabic
+            // letters taking their final form): back off until it fits.
+            let mut placed = line(start, candidates[last])?;
+            while placed.width > max_width && last > first {
+                last -= 1;
+                placed = line(start, candidates[last])?;
             }
-            if fits(start, c) {
-                last_fit = Some(c);
-            } else {
-                // A single unbreakable segment wider than the box: let it overflow.
-                lines.push((start, c));
-                start = c;
-                last_fit = None;
-            }
-        }
-        if start < para.len() {
-            lines.push((start, para.len()));
+            lines.push(placed);
+            start = candidates[last];
+            first = last + 1;
         }
         Ok(lines)
     }
 
+    /// Shapes `para[start..end]` as one line, trailing whitespace trimmed, with
+    /// glyphs in visual order from x = 0. Baseline 0; not yet aligned.
+    #[allow(clippy::too_many_arguments)]
+    fn place_line(
+        &self,
+        para: &str,
+        para_start: usize,
+        start: usize,
+        end: usize,
+        options: &LayoutOptions,
+        features: &[Feature],
+        scale: f32,
+    ) -> Result<LayoutLine> {
+        let end = trim_end(para, start, end);
+        let bidi = bidi_line(para, options.direction, start..end);
+        let mut glyphs = Vec::new();
+        let mut pen = 0.0f64;
+        for run in &bidi.runs {
+            let placed = self.place_run(para, para_start, run, options, features, scale)?;
+            for p in placed.glyphs {
+                glyphs.push(PositionedGlyph {
+                    id: p.glyph.id,
+                    cluster: para_start + run.start + p.glyph.cluster,
+                    x: (pen + p.x) as f32,
+                    y: -(p.glyph.y_offset as f32) * scale,
+                    bbox: p.glyph.bbox,
+                });
+            }
+            pen += placed.width;
+        }
+        Ok(LayoutLine {
+            start: para_start + start,
+            end: para_start + end,
+            x: 0.0,
+            baseline: 0.0,
+            width: pen as f32,
+            direction: bidi.base_direction,
+            glyphs,
+            ink: None,
+        })
+    }
+
     /// Prefix sums of advance width (px) per byte offset of `para`, from one
-    /// shaping pass over the paragraph. Ignores kerning/ligatures across range
-    /// edges, which is fine for choosing break points.
+    /// shaping pass over the paragraph. A quick estimate for choosing break
+    /// points: it ignores shaping that changes at the line ends, which
+    /// `wrap_paragraph` checks for.
     fn advance_prefix(
         &self,
         para: &str,
@@ -481,6 +495,30 @@ impl Font {
             cluster_widths: widths,
         })
     }
+}
+
+/// Optional ligatures, turned off by letter spacing as in CSS, so spaced-out
+/// text doesn't keep "fi" squeezed together. Required ones (`rlig`) stay on.
+///
+/// The same four as Firefox and Safari. Contextual alternates (`calt`) also
+/// stay on, as in those two: script fonts need them to join their letters.
+/// Chrome turns `calt` off too.
+const OPTIONAL_LIGATURES_OFF: &[&str] = &["liga=0", "clig=0", "dlig=0", "hlig=0"];
+
+/// The features to shape with: `options.features`, after the ligatures that
+/// letter spacing turns off. Later features win, so a user's "liga" still
+/// turns them back on.
+fn layout_features(options: &LayoutOptions) -> Result<Vec<Feature>> {
+    let mut features = Vec::new();
+    if options.letter_spacing != 0.0 {
+        let off: Vec<String> = OPTIONAL_LIGATURES_OFF
+            .iter()
+            .map(|f| f.to_string())
+            .collect();
+        features = parse_features(&off)?;
+    }
+    features.extend(parse_features(&options.features)?);
+    Ok(features)
 }
 
 /// Shifts feature ranges (byte offsets into the whole text) to a piece of it
@@ -695,6 +733,43 @@ mod tests {
         assert!(l.lines.len() > 1);
         assert_eq!(texts("abcdefghij", &l).concat(), "abcdefghij");
         assert!(l.lines.iter().all(|line| line.width <= 100.01));
+    }
+
+    #[test]
+    fn wrapped_lines_fit_when_shaping_changes_at_the_break() {
+        // Breaking inside a ligature, between kerned letters or between joined
+        // Arabic letters gives the line ends different glyphs or advances than
+        // the paragraph had. Every box is wide enough for any single character.
+        let roboto = test_font();
+        let arabic = crate::font::load_test_font("NotoSansArabic.ttf");
+        let cases = [
+            (&roboto, "fififififififififi", WrapMode::Char),
+            (&roboto, "AVAVAVAVAVAVAVAVAV", WrapMode::Char),
+            (&arabic, "مرحبا بالعالم كيف حالك اليوم", WrapMode::Char),
+            (&arabic, "مرحبا بالعالم كيف حالك اليوم", WrapMode::Word),
+        ];
+        for (font, text, wrap) in cases {
+            for max in (60..400).step_by(3) {
+                let max = max as f32;
+                let o = with(48.0, |o| {
+                    o.wrap = wrap;
+                    o.max_width = Some(max);
+                });
+                let l = font.layout(text, &o).unwrap();
+                for line in &l.lines {
+                    let single_word = !text[line.start..line.end].contains(' ');
+                    if wrap == WrapMode::Word && single_word {
+                        continue; // an unbreakable word may overflow
+                    }
+                    assert!(
+                        line.width <= max,
+                        "{text:?} {wrap:?} at {max}px: {:?} is {}px wide",
+                        &text[line.start..line.end],
+                        line.width
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -972,6 +1047,30 @@ mod tests {
         assert!(
             (dx[3] - 12.0).abs() < 1e-3,
             "س moves right: the gap opens on its left"
+        );
+    }
+
+    #[test]
+    fn letter_spacing_turns_optional_ligatures_off() {
+        let font = test_font();
+        let glyphs = |o: &LayoutOptions| font.layout("fix", o).unwrap().lines[0].glyphs.len();
+        assert_eq!(glyphs(&opts(100.0)), 2, "fi ligature");
+        assert_eq!(glyphs(&with(100.0, |o| o.letter_spacing = 5.0)), 3);
+        assert_eq!(glyphs(&with(100.0, |o| o.letter_spacing = -1.0)), 3);
+        assert_eq!(glyphs(&with(100.0, |o| o.word_spacing = 5.0)), 2);
+        // Asking for the ligature keeps it.
+        let liga = with(100.0, |o| {
+            o.letter_spacing = 5.0;
+            o.features = vec!["liga".into()];
+        });
+        assert_eq!(glyphs(&liga), 2);
+
+        // Required ligatures stay: lam-alef still joins into one glyph.
+        let arabic = crate::font::load_test_font("NotoSansArabic.ttf");
+        let count = |o: &LayoutOptions| arabic.layout("لا", o).unwrap().lines[0].glyphs.len();
+        assert_eq!(
+            count(&with(60.0, |o| o.letter_spacing = 5.0)),
+            count(&opts(60.0))
         );
     }
 

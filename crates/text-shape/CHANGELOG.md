@@ -10,7 +10,20 @@ The npm package is versioned separately; see
 
 ## [Unreleased]
 
+### Added
+
+- Font introspection: `Font::info` (names, version, vendor, weight and width
+  class, embedding bits, dates, glyph count), `name` and `names` (the `name`
+  table, with languages), `glyph_id` and `characters` (the character map),
+  `glyph_name` and `glyph_by_name`, `features` and `scripts` (from `GSUB` and
+  `GPOS`), `named_instances` of variable fonts, and `tables` (the table
+  directory).
+
 ### Changed
+
+- Non-zero `letter_spacing` turns off optional ligatures (`liga`, `clig`,
+  `dlig`, `hlig`), as in CSS, so spaced-out text no longer keeps "fi" squeezed
+  together. Turn one back on through `features`, e.g. `"liga"`.
 
 - Shaping now uses HarfRust, and fonts are read with read-fonts, instead of
   rustybuzz and ttf-parser, which are no longer developed. The API is unchanged.
@@ -22,6 +35,10 @@ The npm package is versioned separately; see
 
 ### Fixed
 
+- Wrapped lines no longer come out wider than `max_width` when shaping changes
+  at the break: Arabic letters taking their wider final form at a line end
+  (by up to 33px at 48px with character wrapping), or kerning between the
+  letters either side of a character-wrap break.
 - Kerning in variable fonts away from their default axis values now follows the
   font's kerning variations, matching HarfBuzz; it was off by up to a few
   hundred font units per line (e.g. "AV", "To" in Roboto Flex at `wght` 100).
